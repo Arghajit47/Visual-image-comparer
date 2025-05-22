@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertCircle, ImageIcon } from "lucide-react";
 
-// Define the structure of the data object from Resemble.js
+// Define the structure of the data object from Resemble.js at the module level
 interface ResembleAnalysisData {
   misMatchPercentage: string;
   isSameDimensions: boolean;
@@ -85,16 +85,21 @@ export default function ImageComparer() {
           }
           setIsLoading(false);
         });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Error during comparison setup:", e);
       let errorMessage = "Failed to compare images.";
       if (e instanceof Error) {
         errorMessage += ` ${e.message}`;
-      }
-      if (String(e).toLowerCase().includes("cors") || (e instanceof Error && e.message.toLowerCase().includes("cors"))) {
-        errorMessage = "CORS error: Cannot load images from the provided URLs. Ensure the remote servers allow cross-origin requests (CORS headers). You might need to use a CORS proxy if you don't control the image servers.";
-      } else if (e instanceof TypeError && e.message.includes("fetch")) {
-         errorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
+        if (e.message.toLowerCase().includes("cors")) {
+            errorMessage = "CORS error: Cannot load images from the provided URLs. Ensure the remote servers allow cross-origin requests (CORS headers). You might need to use a CORS proxy if you don't control the image servers.";
+        } else if (e.message.toLowerCase().includes("failed to fetch") || (e instanceof TypeError && e.message.toLowerCase().includes("networkerror"))) {
+            errorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
+        }
+      } else {
+        const errorString = String(e).toLowerCase();
+        if (errorString.includes("cors")) {
+            errorMessage = "CORS error: Cannot load images. Check server CORS policy.";
+        }
       }
       setError(errorMessage);
       setIsLoading(false);
