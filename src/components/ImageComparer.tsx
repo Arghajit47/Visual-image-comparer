@@ -18,10 +18,8 @@ interface ResembleAnalysisData {
   dimensionDifference: { width: number; height: number };
   getImageDataUrl?: () => string; // Optional because it might not exist if images are identical or error
   analysisTime: number;
-  // Potentially other fields, ensure to type them if used
   error?: any;
 }
-
 
 export default function ImageComparer() {
   const [baseImageUrl, setBaseImageUrl] = useState<string>("");
@@ -40,7 +38,7 @@ export default function ImageComparer() {
     setError(null);
     setDiffImageUrl(null);
     setDifferencePercentage(null);
-    setDisplayBaseUrl(baseImageUrl); // Set display URLs on compare attempt
+    setDisplayBaseUrl(baseImageUrl);
     setDisplayActualUrl(actualImageUrl);
 
     if (!baseImageUrl || !actualImageUrl) {
@@ -49,7 +47,6 @@ export default function ImageComparer() {
       return;
     }
 
-    // Basic URL validation (does not check if URL is reachable or an image)
     try {
       new URL(baseImageUrl);
       new URL(actualImageUrl);
@@ -64,8 +61,8 @@ export default function ImageComparer() {
         errorColor: { red: 255, green: 0, blue: 255 }, // Magenta for differences
         errorType: "flatMap",
         transparency: 0.3,
-        largeImageThreshold: 0, // Compare all images fully, 0 disables threshold or set to a high number e.g. 5000
-        useCrossOrigin: true, // Important for fetching from URLs
+        largeImageThreshold: 0,
+        useCrossOrigin: true,
       });
 
       resemble(baseImageUrl)
@@ -73,7 +70,7 @@ export default function ImageComparer() {
         .onComplete((data: ResembleAnalysisData) => {
           if (data.error) {
             console.error("Resemble.js error:", data.error);
-            setError(`Error analyzing images: ${data.error}. This could be due to CORS issues or invalid image URLs.`);
+            setError(`Error analyzing images: ${String(data.error)}. This could be due to CORS issues or invalid image URLs.`);
             setIsLoading(false);
             return;
           }
@@ -84,7 +81,7 @@ export default function ImageComparer() {
           if (mismatch > 0 && data.getImageDataUrl) {
             setDiffImageUrl(data.getImageDataUrl());
           } else {
-            setDiffImageUrl(null); // No difference or no diff image method
+            setDiffImageUrl(null);
           }
           setIsLoading(false);
         });
@@ -104,20 +101,16 @@ export default function ImageComparer() {
     }
   };
 
-  // Effect to clear results if URLs change after a comparison
   useEffect(() => {
-    const urlsHaveChanged =
-      (displayBaseUrl && baseImageUrl !== displayBaseUrl) ||
-      (displayActualUrl && actualImageUrl !== displayActualUrl);
+    const baseChanged = displayBaseUrl !== null && baseImageUrl !== displayBaseUrl;
+    const actualChanged = displayActualUrl !== null && actualImageUrl !== displayActualUrl;
+    const urlsHaveChanged = baseChanged || actualChanged;
 
     if (urlsHaveChanged) {
-        // setDisplayBaseUrl(null); // Optionally clear displayed images immediately
-        // setDisplayActualUrl(null);
         setDiffImageUrl(null);
         setDifferencePercentage(null);
-        // setError("Image URLs changed. Click 'Compare Images' again to see updated results."); // Optional user feedback
     }
-  }, [baseImageUrl, actualImageUrl, displayBaseUrl, displayActualUrl]); // Explicit semicolon added
+  }, [baseImageUrl, actualImageUrl, displayBaseUrl, displayActualUrl]);
 
   return (
     <div className="container mx-auto p-4 md:p-8">
