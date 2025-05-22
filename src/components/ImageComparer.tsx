@@ -1,15 +1,15 @@
 
 "use client";
 
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent, useRef } from "react";
 import Image from "next/image";
 import resemble from "resemblejs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, ImageIcon, FileImage, Link as LinkIcon, Filter } from "lucide-react";
+import { Loader2, AlertCircle, ImageIcon, FileImage, Link as LinkIcon, Filter, Download } from "lucide-react";
 
 // Define the structure of the data object from Resemble.js at the module level
 interface ResembleAnalysisData {
@@ -18,7 +18,7 @@ interface ResembleAnalysisData {
   dimensionDifference: { width: number; height: number };
   getImageDataUrl?: () => string;
   analysisTime: number;
-  error?: any; 
+  error?: any;
 }
 
 export default function ImageComparer() {
@@ -49,7 +49,7 @@ export default function ImageComparer() {
     const file = event.target.files?.[0];
     if (file) {
       setBaseImageFile(file);
-      setBaseImageUrl(""); 
+      setBaseImageUrl("");
     } else {
       setBaseImageFile(null);
     }
@@ -59,7 +59,7 @@ export default function ImageComparer() {
     const file = event.target.files?.[0];
     if (file) {
       setActualImageFile(file);
-      setActualImageUrl(""); 
+      setActualImageUrl("");
     } else {
       setActualImageFile(null);
     }
@@ -78,14 +78,14 @@ export default function ImageComparer() {
       if (baseImageFile) {
         sourceBase = await readFileAsDataURL(baseImageFile);
       } else if (baseImageUrl) {
-        new URL(baseImageUrl); 
+        new URL(baseImageUrl);
         sourceBase = baseImageUrl;
       }
 
       if (actualImageFile) {
         sourceActual = await readFileAsDataURL(actualImageFile);
       } else if (actualImageUrl) {
-        new URL(actualImageUrl); 
+        new URL(actualImageUrl);
         sourceActual = actualImageUrl;
       }
 
@@ -95,24 +95,25 @@ export default function ImageComparer() {
         return;
       }
 
-      setDisplayBaseUrl(sourceBase as string); 
+      setDisplayBaseUrl(sourceBase as string);
       setDisplayActualUrl(sourceActual as string);
 
       resemble.outputSettings({
-        errorColor: { red: 255, green: 0, blue: 255 }, 
+        errorColor: { red: 255, green: 0, blue: 255 },
         errorType: "flatMap",
         transparency: 0.3,
         largeImageThreshold: 0,
-        useCrossOrigin: true, 
+        useCrossOrigin: true,
       });
 
       resemble(sourceBase)
         .compareTo(sourceActual)
         .onComplete(function(data: ResembleAnalysisData) {
           if (data.error) {
-            console.warn("Resemble.js analysis error object (raw):", data.error);
+            console.warn("Resemble.js analysis error object (raw):", data.error); // Log the raw error
 
             let errorDetailString = String(data.error);
+            // Clean up common noise like "[object Event]" or "[object ProgressEvent]" from the error string
             errorDetailString = errorDetailString.replace(/\.?\s*\[object Event\]$/i, '').trim();
             errorDetailString = errorDetailString.replace(/\.?\s*\[object ProgressEvent\]$/i, '').trim();
             
@@ -141,7 +142,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           if (mismatch > 0 && data.getImageDataUrl) {
             setDiffImageUrl(data.getImageDataUrl());
           } else {
-            setDiffImageUrl(null); 
+            setDiffImageUrl(null);
           }
           setIsLoading(false);
         });
@@ -174,23 +175,51 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
     const baseSourceIsFile = !!baseImageFile;
     const actualSourceIsFile = !!actualImageFile;
 
-    const baseDisplayMatchesInput = !baseSourceIsFile && displayBaseUrl === baseImageUrl;
-    const actualDisplayMatchesInput = !actualSourceIsFile && displayActualUrl === actualImageUrl;
-
     const baseInputUrlChanged = !baseSourceIsFile && displayBaseUrl && displayBaseUrl !== baseImageUrl;
     const actualInputUrlChanged = !actualSourceIsFile && displayActualUrl && displayActualUrl !== actualImageUrl;
     
-    if (
-      (baseSourceIsFile && (!displayBaseUrl || !displayBaseUrl.startsWith('data:'))) || 
-      (actualSourceIsFile && (!displayActualUrl || !displayActualUrl.startsWith('data:'))) || 
-      baseInputUrlChanged ||
-      actualInputUrlChanged
-    ) {
+    let resetNeeded = false;
+    if (baseSourceIsFile) {
+      // If base is a file, but displayBaseUrl is not a data URL or is null
+      if (!displayBaseUrl || !displayBaseUrl.startsWith('data:')) {
+        resetNeeded = true;
+      }
+    } else {
+      // If base is a URL and it has changed
+      if (baseInputUrlChanged) {
+        resetNeeded = true;
+      }
+    }
+
+    if (actualSourceIsFile) {
+      // If actual is a file, but displayActualUrl is not a data URL or is null
+      if (!displayActualUrl || !displayActualUrl.startsWith('data:')) {
+        resetNeeded = true;
+      }
+    } else {
+      // If actual is a URL and it has changed
+      if (actualInputUrlChanged) {
+        resetNeeded = true;
+      }
+    }
+
+    if (resetNeeded) {
         setDiffImageUrl(null);
         setDifferencePercentage(null);
     }
   }, [baseImageUrl, actualImageUrl, baseImageFile, actualImageFile, displayBaseUrl, displayActualUrl]);
 
+
+  const handleDownloadDiffImage = () => {
+    if (diffImageUrl) {
+      const link = document.createElement('a');
+      link.href = diffImageUrl;
+      link.download = 'diff-image.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -381,6 +410,14 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
               </div>
             )}
           </CardContent>
+          {diffImageUrl && (
+            <CardFooter className="pt-4 justify-center">
+              <Button onClick={handleDownloadDiffImage} variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Download Diff
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </div>

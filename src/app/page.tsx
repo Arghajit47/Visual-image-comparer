@@ -10,7 +10,7 @@ export default function Home() {
             DiffLens
           </h1>
           <p className="text-xl text-muted-foreground mt-3 max-w-2xl mx-auto">
-            Visually compare two images from URLs and instantly see the percentage of difference, along with a generated diff image.
+            Visually compare two images from URLs/Files and instantly see the percentage of difference, along with a generated diff image.
           </p>
         </header>
         <ImageComparerLoader />
