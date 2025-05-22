@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, ImageIcon, FileImage, Link } from "lucide-react";
+import { Loader2, AlertCircle, ImageIcon, FileImage, Link, Filter } from "lucide-react";
 
 // Define the structure of the data object from Resemble.js at the module level
 interface ResembleAnalysisData {
@@ -31,6 +31,7 @@ export default function ImageComparer() {
   const [displayActualUrl, setDisplayActualUrl] = useState<string | null>(null);
   const [diffImageUrl, setDiffImageUrl] = useState<string | null>(null);
   const [differencePercentage, setDifferencePercentage] = useState<number | null>(null);
+  const [threshold, setThreshold] = useState<number>(0);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +71,8 @@ export default function ImageComparer() {
     setDiffImageUrl(null);
     setDifferencePercentage(null);
 
-    let sourceBase: string | null = null;
-    let sourceActual: string | null = null;
+    let sourceBase: string | Buffer | null = null;
+    let sourceActual: string | Buffer | null = null;
 
     try {
       if (baseImageFile) {
@@ -94,15 +95,15 @@ export default function ImageComparer() {
         return;
       }
 
-      setDisplayBaseUrl(sourceBase);
-      setDisplayActualUrl(sourceActual);
+      setDisplayBaseUrl(sourceBase as string); // Assuming sourceBase and sourceActual will be strings for display
+      setDisplayActualUrl(sourceActual as string);
 
       resemble.outputSettings({
         errorColor: { red: 255, green: 0, blue: 255 }, // Magenta for differences
         errorType: "flatMap",
         transparency: 0.3,
         largeImageThreshold: 0,
-        useCrossOrigin: true,
+        useCrossOrigin: true, // Important for URL-based images
       });
 
       resemble(sourceBase)
@@ -112,15 +113,16 @@ export default function ImageComparer() {
             console.warn("Resemble.js analysis error object (raw):", data.error);
 
             let errorDetailString = String(data.error);
+            // Clean up common noise like "[object Event]" or "[object ProgressEvent]"
             errorDetailString = errorDetailString.replace(/\.?\s*\[object Event\]$/i, '').trim();
             errorDetailString = errorDetailString.replace(/\.?\s*\[object ProgressEvent\]$/i, '').trim();
-
+            
             let userFriendlyMessage = `Image comparison failed. Resemble.js reported: "${errorDetailString}".`;
             const lowerErrorDetail = errorDetailString.toLowerCase();
 
-            if (lowerErrorDetail.includes("failed to load") ||
-                lowerErrorDetail.includes("networkerror") ||
-                lowerErrorDetail.includes("cors") ||
+            if (lowerErrorDetail.includes("failed to load") || 
+                lowerErrorDetail.includes("networkerror") || 
+                lowerErrorDetail.includes("cors") || 
                 lowerErrorDetail.includes("img not loaded")) {
               userFriendlyMessage = `Failed to load one of the images for comparison. This can happen if:
 1. The URL is not a direct link to an image file (e.g., it's a webpage displaying the image).
@@ -140,7 +142,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           if (mismatch > 0 && data.getImageDataUrl) {
             setDiffImageUrl(data.getImageDataUrl());
           } else {
-            setDiffImageUrl(null);
+            setDiffImageUrl(null); // No difference or no diff image generated
           }
           setIsLoading(false);
         });
@@ -152,15 +154,16 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
         const lowerCaseMessage = e.message.toLowerCase();
         if (lowerCaseMessage.includes("cors")) {
           specificErrorMessage = "CORS error: Cannot load images. Ensure the remote servers allow cross-origin requests (CORS headers). You might need to use a CORS proxy.";
-        } else if (lowerCaseMessage.includes("failed to fetch") || (e instanceof TypeError && lowerCaseMessage.includes("networkerror")) || e.message.includes("Invalid URL")) {
+        } else if (lowerCaseMessage.includes("failed to fetch") || (e instanceof TypeError && lowerCaseMessage.includes("networkerror")) || e.message.includes("invalid url")) {
           specificErrorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
         } else {
           specificErrorMessage = `Comparison error: ${e.message}`;
         }
       } else {
+        // Fallback for non-Error objects
         const errorString = String(e).toLowerCase();
-        if (errorString.includes("cors")) {
-          specificErrorMessage = "CORS error: Cannot load images. Check server CORS policy.";
+        if (errorString.includes("cors")){
+            specificErrorMessage = "CORS error: Cannot load images. Check server CORS policy.";
         }
       }
       
@@ -170,16 +173,30 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
   };
 
   useEffect(() => {
-    const baseSourceChanged = (baseImageFile && displayBaseUrl && !displayBaseUrl.startsWith('data:')) || (baseImageUrl && displayBaseUrl !== baseImageUrl);
-    const actualSourceChanged = (actualImageFile && displayActualUrl && !displayActualUrl.startsWith('data:')) || (actualImageUrl && displayActualUrl !== actualImageUrl);
-    
-    const urlsHaveChanged = baseSourceChanged || actualSourceChanged;
+    const baseSourceIsFile = !!baseImageFile;
+    const actualSourceIsFile = !!actualImageFile;
 
-    if (urlsHaveChanged) {
+    // Check if the displayed URL matches the input URL (if not a file)
+    const baseDisplayMatchesInput = !baseSourceIsFile && displayBaseUrl === baseImageUrl;
+    const actualDisplayMatchesInput = !actualSourceIsFile && displayActualUrl === actualImageUrl;
+
+    // If source is a file, the display URL will be a data URL, so it won't match the input URL field.
+    // We only care if the input URL changed while a data URL (from file) is NOT being shown.
+    const baseInputUrlChanged = !baseSourceIsFile && displayBaseUrl && displayBaseUrl !== baseImageUrl;
+    const actualInputUrlChanged = !actualSourceIsFile && displayActualUrl && displayActualUrl !== actualImageUrl;
+    
+    // Reset diff if the file selection changes, or if an input URL changes (and it's not already displaying that URL)
+    if (
+      (baseSourceIsFile && (!displayBaseUrl || !displayBaseUrl.startsWith('data:'))) || // Base file selected, but display isn't data URL
+      (actualSourceIsFile && (!displayActualUrl || !displayActualUrl.startsWith('data:'))) || // Actual file selected
+      baseInputUrlChanged ||
+      actualInputUrlChanged
+    ) {
         setDiffImageUrl(null);
         setDifferencePercentage(null);
     }
   }, [baseImageUrl, actualImageUrl, baseImageFile, actualImageFile, displayBaseUrl, displayActualUrl]);
+
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -237,6 +254,28 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
             {actualImageFile && <p className="text-xs text-muted-foreground mt-1">Selected: {actualImageFile.name}</p>}
           </div>
         </div>
+
+        <div className="space-y-4 my-6">
+            <Label htmlFor="differenceThreshold" className="text-sm font-medium flex items-center">
+                <Filter className="mr-2 h-4 w-4" />
+                Difference Threshold (%) (Optional)
+            </Label>
+            <Input
+            id="differenceThreshold"
+            type="number"
+            placeholder="0.00 (default)"
+            step="0.01"
+            min="0"
+            value={threshold.toString()}
+            onChange={(e) => {
+                const val = e.target.value;
+                setThreshold(val === "" ? 0 : (parseFloat(val) || 0));
+            }}
+            className="mt-1"
+            aria-label="Difference Threshold Percentage"
+            />
+        </div>
+
         <Button onClick={handleCompare} disabled={isLoading} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
           {isLoading ? (
             <>
@@ -255,21 +294,23 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
         </Alert>
       )}
 
-      {(displayBaseUrl || displayActualUrl || diffImageUrl || differencePercentage !== null) && !isLoading && !error && (
+      {(differencePercentage !== null) && !isLoading && !error && (
         <div className="mb-8 text-center transition-opacity duration-300 ease-in-out">
-            {differencePercentage !== null && (
-              <>
-                <p className="text-2xl font-semibold mb-1">
-                Difference: <span className="text-accent">{differencePercentage.toFixed(2)}%</span>
-                </p>
-                {differencePercentage > 0 && (
-                  <p className="text-lg text-destructive font-semibold mt-1">
-                    Status: Failed
-                  </p>
-                )}
-              </>
+            <p className="text-2xl font-semibold mb-1">
+            Difference: <span className="text-accent">{differencePercentage.toFixed(2)}%</span>
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+                (Current Threshold: {threshold.toFixed(2)}%)
+            </p>
+            {differencePercentage > threshold ? (
+              <p className="text-lg text-destructive font-semibold mt-1">
+                Status: Failed
+              </p>
+            ) : (
+              <p className="text-lg text-primary font-semibold mt-1">
+                Status: Passed
+              </p>
             )}
-            {differencePercentage === 0 && <p className="text-lg text-muted-foreground">Status: Passed (Images are identical)</p>}
         </div>
       )}
 
@@ -292,8 +333,8 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
                 onError={() => { setError(`Failed to load base image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayBaseUrl(null);}}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <ImageIcon className="w-16 h-16 opacity-50" aria-hidden="true" />
+              <div className="flex items-center justify-center h-full text-muted-foreground" aria-hidden="true">
+                <ImageIcon className="w-16 h-16 opacity-50" />
               </div>
             )}
           </CardContent>
@@ -317,8 +358,8 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
                 onError={() => { setError(`Failed to load actual image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayActualUrl(null);}}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <ImageIcon className="w-16 h-16 opacity-50" aria-hidden="true" />
+              <div className="flex items-center justify-center h-full text-muted-foreground" aria-hidden="true">
+                <ImageIcon className="w-16 h-16 opacity-50" />
               </div>
             )}
           </CardContent>
@@ -341,8 +382,8 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
                 data-ai-hint="colorful difference"
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                 {isLoading && !error && (displayBaseUrl && displayActualUrl) ? <p className="text-sm">Generating diff...</p> : <ImageIcon className="w-16 h-16 opacity-50" aria-hidden="true" />}
+              <div className="flex items-center justify-center h-full text-muted-foreground" aria-hidden="true">
+                 {isLoading && !error && (displayBaseUrl && displayActualUrl) ? <p className="text-sm">Generating diff...</p> : <ImageIcon className="w-16 h-16 opacity-50" />}
               </div>
             )}
           </CardContent>
