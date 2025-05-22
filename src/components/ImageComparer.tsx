@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, ChangeEvent, useRef } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import Image from "next/image";
 import resemble from "resemblejs";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ export default function ImageComparer() {
     const file = event.target.files?.[0];
     if (file) {
       setBaseImageFile(file);
-      setBaseImageUrl("");
+      setBaseImageUrl(""); // Clear URL if file is selected
     } else {
       setBaseImageFile(null);
     }
@@ -59,7 +59,7 @@ export default function ImageComparer() {
     const file = event.target.files?.[0];
     if (file) {
       setActualImageFile(file);
-      setActualImageUrl("");
+      setActualImageUrl(""); // Clear URL if file is selected
     } else {
       setActualImageFile(null);
     }
@@ -78,14 +78,14 @@ export default function ImageComparer() {
       if (baseImageFile) {
         sourceBase = await readFileAsDataURL(baseImageFile);
       } else if (baseImageUrl) {
-        new URL(baseImageUrl);
+        new URL(baseImageUrl); // Validate URL format
         sourceBase = baseImageUrl;
       }
 
       if (actualImageFile) {
         sourceActual = await readFileAsDataURL(actualImageFile);
       } else if (actualImageUrl) {
-        new URL(actualImageUrl);
+        new URL(actualImageUrl); // Validate URL format
         sourceActual = actualImageUrl;
       }
 
@@ -99,11 +99,11 @@ export default function ImageComparer() {
       setDisplayActualUrl(sourceActual as string);
 
       resemble.outputSettings({
-        errorColor: { red: 255, green: 0, blue: 255 },
+        errorColor: { red: 255, green: 0, blue: 255 }, // Pink for differences
         errorType: "flatMap",
         transparency: 0.3,
-        largeImageThreshold: 0,
-        useCrossOrigin: true,
+        largeImageThreshold: 0, // Process large images without downscaling
+        useCrossOrigin: true, // Important for URL-based images on client-side
       });
 
       resemble(sourceBase)
@@ -151,22 +151,23 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
       let specificErrorMessage: string | null = null;
 
       if (e instanceof Error) {
-        const lowerCaseMessage = e.message.toLowerCase();
-        if (lowerCaseMessage.includes("cors")) {
-          specificErrorMessage = "CORS error: Cannot load images. Ensure the remote servers allow cross-origin requests (CORS headers). You might need to use a CORS proxy.";
-        } else if (lowerCaseMessage.includes("failed to fetch") || (e instanceof TypeError && lowerCaseMessage.includes("networkerror")) || e.message.includes("invalid url")) {
-          specificErrorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
-        } else {
-          specificErrorMessage = `Comparison error: ${e.message}`;
-        }
+          if (e.message.toLowerCase().includes("invalid url")) {
+              specificErrorMessage = "Invalid URL format. Please ensure URLs start with http:// or https://.";
+          } else if (e.message.toLowerCase().includes("cors")) {
+            specificErrorMessage = "CORS error: Cannot load images from the provided URLs. Ensure the remote servers allow cross-origin requests. You might need to use a CORS proxy or try uploading the files directly.";
+          } else if (e.message.toLowerCase().includes("failed to fetch") || (e instanceof TypeError && e.message.toLowerCase().includes("networkerror"))) {
+            specificErrorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
+          } else {
+            specificErrorMessage = `Comparison error: ${e.message}`;
+          }
       } else {
         const errorString = String(e).toLowerCase();
-        if (errorString.includes("cors")){
+        if (errorString.includes("cors")){ // Fallback for non-Error objects that might still indicate CORS
             specificErrorMessage = "CORS error: Cannot load images. Check server CORS policy.";
         }
       }
       
-      setError(specificErrorMessage || "Failed to compare images. An unknown error occurred.");
+      setError(specificErrorMessage || "Failed to compare images. An unknown error occurred. Please check the console for more details.");
       setIsLoading(false);
     }
   };
@@ -175,39 +176,38 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
     const baseSourceIsFile = !!baseImageFile;
     const actualSourceIsFile = !!actualImageFile;
 
-    const baseInputUrlChanged = !baseSourceIsFile && displayBaseUrl && displayBaseUrl !== baseImageUrl;
-    const actualInputUrlChanged = !actualSourceIsFile && displayActualUrl && displayActualUrl !== actualImageUrl;
-    
+    // Condition to check if inputs have changed in a way that requires resetting diff results
     let resetNeeded = false;
     if (baseSourceIsFile) {
-      // If base is a file, but displayBaseUrl is not a data URL or is null
-      if (!displayBaseUrl || !displayBaseUrl.startsWith('data:')) {
-        resetNeeded = true;
-      }
+      // If base is now a file, but displayBaseUrl is still an old URL (not a data URI) or null
+      if (displayBaseUrl && !displayBaseUrl.startsWith('data:')) resetNeeded = true;
     } else {
-      // If base is a URL and it has changed
-      if (baseInputUrlChanged) {
-        resetNeeded = true;
-      }
+      // If base is now a URL, and it's different from what's displayed (and display isn't a data URI)
+      if (displayBaseUrl && displayBaseUrl !== baseImageUrl && !displayBaseUrl.startsWith('data:')) resetNeeded = true;
     }
 
     if (actualSourceIsFile) {
-      // If actual is a file, but displayActualUrl is not a data URL or is null
-      if (!displayActualUrl || !displayActualUrl.startsWith('data:')) {
-        resetNeeded = true;
-      }
+       // If actual is now a file, but displayActualUrl is still an old URL (not a data URI) or null
+      if (displayActualUrl && !displayActualUrl.startsWith('data:')) resetNeeded = true;
     } else {
-      // If actual is a URL and it has changed
-      if (actualInputUrlChanged) {
-        resetNeeded = true;
-      }
+      // If actual is now a URL, and it's different from what's displayed (and display isn't a data URI)
+      if (displayActualUrl && displayActualUrl !== actualImageUrl && !displayActualUrl.startsWith('data:')) resetNeeded = true;
     }
+    
+    // More direct check: if the source URL/file changes, reset
+    if (baseImageUrl !== (displayBaseUrl && !displayBaseUrl.startsWith('data:') ? displayBaseUrl : '') && !baseImageFile) resetNeeded = true;
+    if (actualImageUrl !== (displayActualUrl && !displayActualUrl.startsWith('data:') ? displayActualUrl : '') && !actualImageFile) resetNeeded = true;
+    if (baseImageFile && (!displayBaseUrl || !displayBaseUrl.startsWith('data:'))) resetNeeded = true;
+    if (actualImageFile && (!displayActualUrl || !displayActualUrl.startsWith('data:'))) resetNeeded = true;
+
 
     if (resetNeeded) {
         setDiffImageUrl(null);
         setDifferencePercentage(null);
+        // Optionally reset display URLs if they are not from current valid sources
+        // This part is tricky, as we want to keep displaying uploaded files until new ones are chosen
     }
-  }, [baseImageUrl, actualImageUrl, baseImageFile, actualImageFile, displayBaseUrl, displayActualUrl]);
+  }, [baseImageUrl, actualImageUrl, baseImageFile, actualImageFile]);
 
 
   const handleDownloadDiffImage = () => {
@@ -289,10 +289,16 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
             placeholder="0.00 (default)"
             step="0.01"
             min="0"
-            value={threshold.toString()}
+            max="100"
+            value={threshold.toString()} // Keep as string for controlled input, parse on use or change
             onChange={(e) => {
                 const val = e.target.value;
-                setThreshold(val === "" ? 0 : (parseFloat(val) || 0));
+                // Allow empty input for temporary state, default to 0 if blurred empty
+                // Or parse directly:
+                let numVal = parseFloat(val);
+                if (isNaN(numVal) || numVal < 0) numVal = 0;
+                if (numVal > 100) numVal = 100;
+                setThreshold(numVal);
             }}
             className="mt-1"
             aria-label="Difference Threshold Percentage"
@@ -342,7 +348,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           <CardHeader>
             <CardTitle>Base Image</CardTitle>
           </CardHeader>
-          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden">
+          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden p-0">
             {displayBaseUrl ? (
               <Image 
                 src={displayBaseUrl} 
@@ -350,7 +356,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
                 width={0}
                 height={0}
                 sizes="(max-width: 767px) 100vw, 33vw"
-                style={{ width: '100%', height: 'auto', objectFit: 'contain' }} 
+                style={{ width: '100%', height: 'auto', objectFit: 'contain', color: 'transparent' }} 
                 className="rounded-b-lg" 
                 data-ai-hint="abstract photo" 
                 onError={() => { setError(`Failed to load base image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayBaseUrl(null);}}
@@ -367,7 +373,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           <CardHeader>
             <CardTitle>Actual Image</CardTitle>
           </CardHeader>
-          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden">
+          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden p-0">
             {displayActualUrl ? (
               <Image 
                 src={displayActualUrl} 
@@ -375,7 +381,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
                 width={0}
                 height={0}
                 sizes="(max-width: 767px) 100vw, 33vw"
-                style={{ width: '100%', height: 'auto', objectFit: 'contain' }} 
+                style={{ width: '100%', height: 'auto', objectFit: 'contain', color: 'transparent' }} 
                 className="rounded-b-lg" 
                 data-ai-hint="abstract pattern" 
                 onError={() => { setError(`Failed to load actual image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayActualUrl(null);}}
@@ -392,7 +398,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           <CardHeader>
             <CardTitle>Difference</CardTitle>
           </CardHeader>
-          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden">
+          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden p-0">
             {diffImageUrl ? (
               <Image 
                 src={diffImageUrl} 
@@ -400,7 +406,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
                 width={0}
                 height={0}
                 sizes="(max-width: 767px) 100vw, 33vw"
-                style={{ width: '100%', height: 'auto', objectFit: 'contain' }} 
+                style={{ width: '100%', height: 'auto', objectFit: 'contain', color: 'transparent' }} 
                 className="rounded-b-lg"
                 data-ai-hint="colorful difference"
               />

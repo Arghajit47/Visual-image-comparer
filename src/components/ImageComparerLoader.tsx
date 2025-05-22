@@ -9,14 +9,14 @@ const ImageComparerLoading = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 p-6 border rounded-lg shadow-lg">
       <div>
         <Skeleton className="h-6 w-1/4 mb-2" />
-        <Skeleton className="h-10 w-full" />
+        <Skeleton className="w-full" />
       </div>
       <div>
         <Skeleton className="h-6 w-1/4 mb-2" />
-        <Skeleton className="h-10 w-full" />
+        <Skeleton className="w-full" />
       </div>
       <div className="md:col-span-2">
-        <Skeleton className="h-10 w-full md:w-40" />
+        <Skeleton className="w-full md:w-40" />
       </div>
     </div>
     <div className="text-center">
