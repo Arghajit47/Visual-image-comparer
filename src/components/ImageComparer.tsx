@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,19 +19,19 @@ interface ResembleAnalysisData {
   getImageDataUrl?: () => string; // Optional because it might not exist if images are identical or error
   analysisTime: number;
   // Potentially other fields, ensure to type them if used
-  error?: any; 
+  error?: any;
 }
 
 
 export default function ImageComparer() {
   const [baseImageUrl, setBaseImageUrl] = useState<string>("");
   const [actualImageUrl, setActualImageUrl] = useState<string>("");
-  
+
   const [displayBaseUrl, setDisplayBaseUrl] = useState<string | null>(null);
   const [displayActualUrl, setDisplayActualUrl] = useState<string | null>(null);
   const [diffImageUrl, setDiffImageUrl] = useState<string | null>(null);
   const [differencePercentage, setDifferencePercentage] = useState<number | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +58,7 @@ export default function ImageComparer() {
       setIsLoading(false);
       return;
     }
-    
+
     try {
       resemble.outputSettings({
         errorColor: { red: 255, green: 0, blue: 255 }, // Magenta for differences
@@ -102,18 +103,21 @@ export default function ImageComparer() {
       setIsLoading(false);
     }
   };
-  
+
   // Effect to clear results if URLs change after a comparison
   useEffect(() => {
-    if (displayBaseUrl && baseImageUrl !== displayBaseUrl || displayActualUrl && actualImageUrl !== displayActualUrl) {
+    const urlsHaveChanged =
+      (displayBaseUrl && baseImageUrl !== displayBaseUrl) ||
+      (displayActualUrl && actualImageUrl !== displayActualUrl);
+
+    if (urlsHaveChanged) {
         // setDisplayBaseUrl(null); // Optionally clear displayed images immediately
         // setDisplayActualUrl(null);
         setDiffImageUrl(null);
         setDifferencePercentage(null);
         // setError("Image URLs changed. Click 'Compare Images' again to see updated results."); // Optional user feedback
     }
-  }, [baseImageUrl, actualImageUrl, displayBaseUrl, displayActualUrl]);
-
+  }, [baseImageUrl, actualImageUrl, displayBaseUrl, displayActualUrl]); // Explicit semicolon added
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -121,23 +125,23 @@ export default function ImageComparer() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <Label htmlFor="baseImageUrl" className="text-sm font-medium">Base Image URL</Label>
-            <Input 
-              id="baseImageUrl" 
-              type="url" 
-              placeholder="https://placehold.co/600x400.png" 
-              value={baseImageUrl} 
-              onChange={(e) => setBaseImageUrl(e.target.value)} 
+            <Input
+              id="baseImageUrl"
+              type="url"
+              placeholder="https://placehold.co/600x400.png"
+              value={baseImageUrl}
+              onChange={(e) => setBaseImageUrl(e.target.value)}
               className="mt-1"
             />
           </div>
           <div>
             <Label htmlFor="actualImageUrl" className="text-sm font-medium">Actual Image URL</Label>
-            <Input 
-              id="actualImageUrl" 
-              type="url" 
-              placeholder="https://placehold.co/600x400.png" 
-              value={actualImageUrl} 
-              onChange={(e) => setActualImageUrl(e.target.value)} 
+            <Input
+              id="actualImageUrl"
+              type="url"
+              placeholder="https://placehold.co/600x400.png"
+              value={actualImageUrl}
+              onChange={(e) => setActualImageUrl(e.target.value)}
               className="mt-1"
             />
           </div>
@@ -170,7 +174,7 @@ export default function ImageComparer() {
             )}
         </div>
       )}
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="shadow-md transition-all duration-300 ease-in-out">
           <CardHeader>
