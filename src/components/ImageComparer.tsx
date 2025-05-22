@@ -258,11 +258,18 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
       {(displayBaseUrl || displayActualUrl || diffImageUrl || differencePercentage !== null) && !isLoading && !error && (
         <div className="mb-8 text-center transition-opacity duration-300 ease-in-out">
             {differencePercentage !== null && (
+              <>
                 <p className="text-2xl font-semibold mb-1">
                 Difference: <span className="text-accent">{differencePercentage.toFixed(2)}%</span>
                 </p>
+                {differencePercentage > 0 && (
+                  <p className="text-lg text-destructive font-semibold mt-1">
+                    Status: Failed
+                  </p>
+                )}
+              </>
             )}
-            {differencePercentage === 0 && <p className="text-lg text-muted-foreground">Images are identical.</p>}
+            {differencePercentage === 0 && <p className="text-lg text-muted-foreground">Status: Passed (Images are identical)</p>}
         </div>
       )}
 
