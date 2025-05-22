@@ -224,22 +224,38 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
   return (
     <div className="container mx-auto p-4 md:p-8">
       <Card className="mb-8 p-6 shadow-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8 mb-6">
-          
+        <div className="grid grid-cols-1 grid-cols-3 md:grid-cols-2 gap-x-6 gap-y-8 mb-6">
           <div className="space-y-4">
-            <Label htmlFor="baseImageUrl" className="text-sm font-medium flex items-center"><LinkIcon className="mr-2 h-4 w-4" />Base Image URL</Label>
+            <Label
+              htmlFor="baseImageUrl"
+              className="text-sm font-medium flex items-center"
+            >
+              <LinkIcon className="mr-2 h-4 w-4" />
+              Base Image URL
+            </Label>
             <Input
               id="baseImageUrl"
               type="url"
               placeholder="https://placehold.co/600x400.png"
               value={baseImageUrl}
-              onChange={(e) => { setBaseImageUrl(e.target.value); if(e.target.value) setBaseImageFile(null);}}
+              onChange={(e) => {
+                setBaseImageUrl(e.target.value);
+                if (e.target.value) setBaseImageFile(null);
+              }}
               className="mt-1"
               aria-label="Base Image URL"
               disabled={!!baseImageFile}
             />
-            <div className="text-center my-2 text-sm text-muted-foreground">OR</div>
-            <Label htmlFor="baseImageFile" className="text-sm font-medium flex items-center"><FileImage className="mr-2 h-4 w-4" />Upload Base Image</Label>
+            <div className="text-center my-2 text-sm text-muted-foreground">
+              OR
+            </div>
+            <Label
+              htmlFor="baseImageFile"
+              className="text-sm font-medium flex items-center"
+            >
+              <FileImage className="mr-2 h-4 w-4" />
+              Upload Base Image
+            </Label>
             <Input
               id="baseImageFile"
               type="file"
@@ -248,24 +264,44 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
               className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
               aria-label="Upload Base Image"
             />
-            {baseImageFile && <p className="text-xs text-muted-foreground mt-1">Selected: {baseImageFile.name}</p>}
+            {baseImageFile && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Selected: {baseImageFile.name}
+              </p>
+            )}
           </div>
 
-          
           <div className="space-y-4">
-            <Label htmlFor="actualImageUrl" className="text-sm font-medium flex items-center"><LinkIcon className="mr-2 h-4 w-4" />Actual Image URL</Label>
+            <Label
+              htmlFor="actualImageUrl"
+              className="text-sm font-medium flex items-center"
+            >
+              <LinkIcon className="mr-2 h-4 w-4" />
+              Actual Image URL
+            </Label>
             <Input
               id="actualImageUrl"
               type="url"
               placeholder="https://placehold.co/600x400.png"
               value={actualImageUrl}
-              onChange={(e) => {setActualImageUrl(e.target.value); if(e.target.value) setActualImageFile(null);}}
+              onChange={(e) => {
+                setActualImageUrl(e.target.value);
+                if (e.target.value) setActualImageFile(null);
+              }}
               className="mt-1"
               aria-label="Actual Image URL"
               disabled={!!actualImageFile}
             />
-             <div className="text-center my-2 text-sm text-muted-foreground">OR</div>
-            <Label htmlFor="actualImageFile" className="text-sm font-medium flex items-center"><FileImage className="mr-2 h-4 w-4" />Upload Actual Image</Label>
+            <div className="text-center my-2 text-sm text-muted-foreground">
+              OR
+            </div>
+            <Label
+              htmlFor="actualImageFile"
+              className="text-sm font-medium flex items-center"
+            >
+              <FileImage className="mr-2 h-4 w-4" />
+              Upload Actual Image
+            </Label>
             <Input
               id="actualImageFile"
               type="file"
@@ -274,16 +310,23 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
               className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
               aria-label="Upload Actual Image"
             />
-            {actualImageFile && <p className="text-xs text-muted-foreground mt-1">Selected: {actualImageFile.name}</p>}
+            {actualImageFile && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Selected: {actualImageFile.name}
+              </p>
+            )}
           </div>
         </div>
 
         <div className="space-y-4 my-6">
-            <Label htmlFor="differenceThreshold" className="text-sm font-medium flex items-center">
-                <Filter className="mr-2 h-4 w-4" />
-                Difference Threshold (%) (Optional)
-            </Label>
-            <Input
+          <Label
+            htmlFor="differenceThreshold"
+            className="text-sm font-medium flex items-center"
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            Difference Threshold (%) (Optional)
+          </Label>
+          <Input
             id="differenceThreshold"
             type="number"
             placeholder="0.00 (default)"
@@ -292,77 +335,104 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
             max="100"
             value={threshold.toString()} // Keep as string for controlled input, parse on use or change
             onChange={(e) => {
-                const val = e.target.value;
-                // Allow empty input for temporary state, default to 0 if blurred empty
-                // Or parse directly:
-                let numVal = parseFloat(val);
-                if (isNaN(numVal) || numVal < 0) numVal = 0;
-                if (numVal > 100) numVal = 100;
-                setThreshold(numVal);
+              const val = e.target.value;
+              // Allow empty input for temporary state, default to 0 if blurred empty
+              // Or parse directly:
+              let numVal = parseFloat(val);
+              if (isNaN(numVal) || numVal < 0) numVal = 0;
+              if (numVal > 100) numVal = 100;
+              setThreshold(numVal);
             }}
             className="mt-1"
             aria-label="Difference Threshold Percentage"
-            />
+          />
         </div>
 
-        <Button onClick={handleCompare} disabled={isLoading} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button
+          onClick={handleCompare}
+          disabled={isLoading}
+          className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground"
+        >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Comparing...
             </>
-          ) : "Compare Images"}
+          ) : (
+            "Compare Images"
+          )}
         </Button>
       </Card>
 
       {error && (
-        <Alert variant="destructive" className="mb-8 transition-opacity duration-300 ease-in-out">
+        <Alert
+          variant="destructive"
+          className="mb-8 transition-opacity duration-300 ease-in-out"
+        >
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription><pre className="whitespace-pre-wrap">{error}</pre></AlertDescription>
+          <AlertDescription>
+            <pre className="whitespace-pre-wrap">{error}</pre>
+          </AlertDescription>
         </Alert>
       )}
 
-      {(differencePercentage !== null) && !isLoading && !error && (
+      {differencePercentage !== null && !isLoading && !error && (
         <div className="mb-8 text-center transition-opacity duration-300 ease-in-out">
-            <p className="text-2xl font-semibold mb-1">
-            Difference: <span className="text-accent">{differencePercentage.toFixed(2)}%</span>
+          <p className="text-2xl font-semibold mb-1">
+            Difference:{" "}
+            <span className="text-accent">
+              {differencePercentage.toFixed(2)}%
+            </span>
+          </p>
+          <p className="text-sm text-muted-foreground mb-2">
+            (Current Threshold: {threshold.toFixed(2)}%)
+          </p>
+          {differencePercentage > threshold ? (
+            <p className="text-lg text-destructive font-semibold mt-1">
+              Status: Failed
             </p>
-            <p className="text-sm text-muted-foreground mb-2">
-                (Current Threshold: {threshold.toFixed(2)}%)
+          ) : (
+            <p className="text-lg text-success font-semibold mt-1">
+              Status: Passed
             </p>
-            {differencePercentage > threshold ? (
-              <p className="text-lg text-destructive font-semibold mt-1">
-                Status: Failed
-              </p>
-            ) : (
-              <p className="text-lg text-success font-semibold mt-1">
-                Status: Passed
-              </p>
-            )}
+          )}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md: gap-6">
+      <div className="grid grid-cols-1 grid-cols-3 md: gap-6">
         <Card className="shadow-md transition-all duration-300 ease-in-out">
           <CardHeader>
             <CardTitle>Base Image</CardTitle>
           </CardHeader>
           <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden p-0">
             {displayBaseUrl ? (
-              <Image 
-                src={displayBaseUrl} 
-                alt="Base" 
+              <Image
+                src={displayBaseUrl}
+                alt="Base"
                 width={0}
                 height={0}
                 sizes="(max-width: 767px) 100vw, 33vw"
-                style={{ width: '100%', height: 'auto', objectFit: 'contain', color: 'transparent' }} 
-                className="rounded-b-lg" 
-                data-ai-hint="abstract photo" 
-                onError={() => { setError(`Failed to load base image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayBaseUrl(null);}}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  objectFit: "contain",
+                  color: "transparent",
+                }}
+                className="rounded-b-lg"
+                data-ai-hint="abstract photo"
+                onError={() => {
+                  setError(
+                    `Failed to load base image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`
+                  );
+                  setDisplayBaseUrl(null);
+                }}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground" aria-hidden="true">
+              <div
+                className="flex items-center justify-center h-full text-muted-foreground"
+                aria-hidden="true"
+              >
                 <ImageIcon className="w-16 h-16 opacity-50" />
               </div>
             )}
@@ -375,44 +445,76 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           </CardHeader>
           <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden p-0">
             {displayActualUrl ? (
-              <Image 
-                src={displayActualUrl} 
-                alt="Actual" 
+              <Image
+                src={displayActualUrl}
+                alt="Actual"
                 width={0}
                 height={0}
                 sizes="(max-width: 767px) 100vw, 33vw"
-                style={{ width: '100%', height: 'auto', objectFit: 'contain', color: 'transparent' }} 
-                className="rounded-b-lg" 
-                data-ai-hint="abstract pattern" 
-                onError={() => { setError(`Failed to load actual image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayActualUrl(null);}}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  objectFit: "contain",
+                  color: "transparent",
+                }}
+                className="rounded-b-lg"
+                data-ai-hint="abstract pattern"
+                onError={() => {
+                  setError(
+                    `Failed to load actual image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`
+                  );
+                  setDisplayActualUrl(null);
+                }}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground" aria-hidden="true">
+              <div
+                className="flex items-center justify-center h-full text-muted-foreground"
+                aria-hidden="true"
+              >
                 <ImageIcon className="w-16 h-16 opacity-50" />
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className={`shadow-md transition-all duration-500 ease-in-out ${diffImageUrl || (isLoading && !error && (displayBaseUrl && displayActualUrl)) ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+        <Card
+          className={`shadow-md transition-all duration-500 ease-in-out ${
+            diffImageUrl ||
+            (isLoading && !error && displayBaseUrl && displayActualUrl)
+              ? "opacity-100 scale-100"
+              : "opacity-0 scale-95 pointer-events-none"
+          }`}
+        >
           <CardHeader>
             <CardTitle>Difference</CardTitle>
           </CardHeader>
           <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden p-0">
             {diffImageUrl ? (
-              <Image 
-                src={diffImageUrl} 
-                alt="Difference" 
+              <Image
+                src={diffImageUrl}
+                alt="Difference"
                 width={0}
                 height={0}
                 sizes="(max-width: 767px) 100vw, 33vw"
-                style={{ width: '100%', height: 'auto', objectFit: 'contain', color: 'transparent' }} 
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  objectFit: "contain",
+                  color: "transparent",
+                }}
                 className="rounded-b-lg"
                 data-ai-hint="colorful difference"
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground" aria-hidden="true">
-                 {isLoading && !error && (displayBaseUrl && displayActualUrl) ? <p className="text-sm">Generating diff...</p> : <ImageIcon className="w-16 h-16 opacity-50" />}
+              <div
+                className="flex items-center justify-center h-full text-muted-foreground"
+                aria-hidden="true"
+              >
+                {isLoading && !error && displayBaseUrl && displayActualUrl ? (
+                  <p className="text-sm">Generating diff...</p>
+                ) : (
+                  <ImageIcon className="w-16 h-16 opacity-50" />
+                )}
               </div>
             )}
           </CardContent>
