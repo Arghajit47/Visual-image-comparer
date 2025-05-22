@@ -1,6 +1,6 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
-import resemble from 'resemblejs';
+import resemble, { type OutputSettings } from 'resemblejs';
 
 // Define the structure of the data object from Resemble.js
 // Note: In Resemble.js, misMatchPercentage in the callback is typically a number.
@@ -28,13 +28,14 @@ interface CompareImagesResponseBody {
 }
 
 // Configure Resemble.js output settings globally for this API route
-resemble.outputSettings({
+const resembleOutputSettings: OutputSettings = {
   errorColor: { red: 255, green: 0, blue: 255 }, // Pink for differences
-  errorType: 'flatMap', // Show differences as flat areas
+  errorType: 'flatMap' as any, // Use type assertion to allow 'flatMap'
   transparency: 0.3,
   largeImageThreshold: 0, // Process large images without downscaling
   // useCrossOrigin: true, // Not applicable for server-side URL fetching like this
-});
+};
+resemble.outputSettings(resembleOutputSettings);
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,12 +141,16 @@ export async function POST(request: NextRequest) {
     let errorMessage = 'An unexpected error occurred during image comparison.';
     if (e instanceof SyntaxError) {
         errorMessage = 'Invalid JSON payload provided.';
-        return NextResponse.json({ error: errorMessage } as CompareImagesResponseBody, { status: 400 });
+        return NextResponse.json({ 
+          differencePercentage: null, status: null, diffImageUrl: null, error: errorMessage 
+        } as CompareImagesResponseBody, { status: 400 });
     } else if (e instanceof Error) {
         // Specific check for canvas/system library issues
         if (e.message.toLowerCase().includes('canvas') || e.message.toLowerCase().includes('.so')) {
             errorMessage = `Server-side image processing error: ${e.message}. This might be due to missing system dependencies for the 'canvas' library on the server.`;
-            return NextResponse.json({ error: errorMessage } as CompareImagesResponseBody, { status: 500 });
+             return NextResponse.json({ 
+              differencePercentage: null, status: null, diffImageUrl: null, error: errorMessage 
+            } as CompareImagesResponseBody, { status: 500 });
         }
         errorMessage = e.message;
     }
