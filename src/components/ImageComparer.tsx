@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, ImageIcon } from "lucide-react";
+import { Loader2, AlertCircle, ImageIcon, FileImage, Link } from "lucide-react";
 
 // Define the structure of the data object from Resemble.js at the module level
 interface ResembleAnalysisData {
@@ -24,6 +24,8 @@ interface ResembleAnalysisData {
 export default function ImageComparer() {
   const [baseImageUrl, setBaseImageUrl] = useState<string>("");
   const [actualImageUrl, setActualImageUrl] = useState<string>("");
+  const [baseImageFile, setBaseImageFile] = useState<File | null>(null);
+  const [actualImageFile, setActualImageFile] = useState<File | null>(null);
 
   const [displayBaseUrl, setDisplayBaseUrl] = useState<string | null>(null);
   const [displayActualUrl, setDisplayActualUrl] = useState<string | null>(null);
@@ -33,47 +35,83 @@ export default function ImageComparer() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleBaseFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setBaseImageFile(file);
+      setBaseImageUrl(""); // Clear URL if file is selected
+    } else {
+      setBaseImageFile(null);
+    }
+  };
+
+  const handleActualFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setActualImageFile(file);
+      setActualImageUrl(""); // Clear URL if file is selected
+    } else {
+      setActualImageFile(null);
+    }
+  };
+
   const handleCompare = async () => {
     setIsLoading(true);
     setError(null);
     setDiffImageUrl(null);
     setDifferencePercentage(null);
-    setDisplayBaseUrl(baseImageUrl); // Display immediately
-    setDisplayActualUrl(actualImageUrl); // Display immediately
 
-    if (!baseImageUrl || !actualImageUrl) {
-      setError("Please provide both base and actual image URLs.");
-      setIsLoading(false);
-      return;
-    }
+    let sourceBase: string | null = null;
+    let sourceActual: string | null = null;
 
     try {
-      // Validate URLs before attempting to use them
-      new URL(baseImageUrl);
-      new URL(actualImageUrl);
-    } catch (_) {
-      setError("Invalid URL format. Please enter valid URLs.");
-      setIsLoading(false);
-      return;
-    }
+      if (baseImageFile) {
+        sourceBase = await readFileAsDataURL(baseImageFile);
+      } else if (baseImageUrl) {
+        new URL(baseImageUrl); // Validate URL
+        sourceBase = baseImageUrl;
+      }
 
-    try {
+      if (actualImageFile) {
+        sourceActual = await readFileAsDataURL(actualImageFile);
+      } else if (actualImageUrl) {
+        new URL(actualImageUrl); // Validate URL
+        sourceActual = actualImageUrl;
+      }
+
+      if (!sourceBase || !sourceActual) {
+        setError("Please provide sources for both base and actual images (URL or file).");
+        setIsLoading(false);
+        return;
+      }
+
+      setDisplayBaseUrl(sourceBase);
+      setDisplayActualUrl(sourceActual);
+
       resemble.outputSettings({
         errorColor: { red: 255, green: 0, blue: 255 }, // Magenta for differences
         errorType: "flatMap",
         transparency: 0.3,
-        largeImageThreshold: 0, // Process large images fully
-        useCrossOrigin: true, // Important for loading external images
+        largeImageThreshold: 0,
+        useCrossOrigin: true,
       });
 
-      resemble(baseImageUrl)
-        .compareTo(actualImageUrl)
+      resemble(sourceBase)
+        .compareTo(sourceActual)
         .onComplete(function(data: ResembleAnalysisData) {
           if (data.error) {
-            console.warn("Resemble.js analysis error object (raw):", data.error); // Log the raw error
+            console.warn("Resemble.js analysis error object (raw):", data.error);
 
             let errorDetailString = String(data.error);
-            // Clean up common noise like "[object Event]" or "[object ProgressEvent]" from the error string
             errorDetailString = errorDetailString.replace(/\.?\s*\[object Event\]$/i, '').trim();
             errorDetailString = errorDetailString.replace(/\.?\s*\[object ProgressEvent\]$/i, '').trim();
 
@@ -88,7 +126,7 @@ export default function ImageComparer() {
 1. The URL is not a direct link to an image file (e.g., it's a webpage displaying the image).
 2. The image server has CORS restrictions preventing access from other websites.
 3. There's a network issue, or the URL is invalid or inaccessible.
-Please verify the URLs and ensure they point directly to image files. (Details: ${errorDetailString})`;
+Please verify the URLs/files and ensure they point directly to image files. (Details: ${errorDetailString})`;
             }
             
             setError(userFriendlyMessage);
@@ -102,7 +140,7 @@ Please verify the URLs and ensure they point directly to image files. (Details: 
           if (mismatch > 0 && data.getImageDataUrl) {
             setDiffImageUrl(data.getImageDataUrl());
           } else {
-            setDiffImageUrl(null); // No diff image if no mismatch or error
+            setDiffImageUrl(null);
           }
           setIsLoading(false);
         });
@@ -114,7 +152,7 @@ Please verify the URLs and ensure they point directly to image files. (Details: 
         const lowerCaseMessage = e.message.toLowerCase();
         if (lowerCaseMessage.includes("cors")) {
           specificErrorMessage = "CORS error: Cannot load images. Ensure the remote servers allow cross-origin requests (CORS headers). You might need to use a CORS proxy.";
-        } else if (lowerCaseMessage.includes("failed to fetch") || (e instanceof TypeError && lowerCaseMessage.includes("networkerror"))) {
+        } else if (lowerCaseMessage.includes("failed to fetch") || (e instanceof TypeError && lowerCaseMessage.includes("networkerror")) || e.message.includes("Invalid URL")) {
           specificErrorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
         } else {
           specificErrorMessage = `Comparison error: ${e.message}`;
@@ -129,46 +167,74 @@ Please verify the URLs and ensure they point directly to image files. (Details: 
       setError(specificErrorMessage || "Failed to compare images. An unknown error occurred.");
       setIsLoading(false);
     }
-  }; // Explicit semicolon for function expression assignment
+  };
 
   useEffect(() => {
-    const baseChanged = displayBaseUrl !== null && baseImageUrl !== displayBaseUrl;
-    const actualChanged = displayActualUrl !== null && actualImageUrl !== displayActualUrl;
-    const urlsHaveChanged = baseChanged || actualChanged;
+    const baseSourceChanged = (baseImageFile && displayBaseUrl && !displayBaseUrl.startsWith('data:')) || (baseImageUrl && displayBaseUrl !== baseImageUrl);
+    const actualSourceChanged = (actualImageFile && displayActualUrl && !displayActualUrl.startsWith('data:')) || (actualImageUrl && displayActualUrl !== actualImageUrl);
+    
+    const urlsHaveChanged = baseSourceChanged || actualSourceChanged;
 
     if (urlsHaveChanged) {
         setDiffImageUrl(null);
         setDifferencePercentage(null);
     }
-  }, [baseImageUrl, actualImageUrl, displayBaseUrl, displayActualUrl]); // Explicit semicolon for function expression assignment
+  }, [baseImageUrl, actualImageUrl, baseImageFile, actualImageFile, displayBaseUrl, displayActualUrl]);
 
   return (
     <div className="container mx-auto p-4 md:p-8">
       <Card className="mb-8 p-6 shadow-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <Label htmlFor="baseImageUrl" className="text-sm font-medium">Base Image URL</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8 mb-6">
+          {/* Base Image Section */}
+          <div className="space-y-4">
+            <Label htmlFor="baseImageUrl" className="text-sm font-medium flex items-center"><Link className="mr-2 h-4 w-4" />Base Image URL</Label>
             <Input
               id="baseImageUrl"
               type="url"
               placeholder="https://placehold.co/600x400.png"
               value={baseImageUrl}
-              onChange={(e) => setBaseImageUrl(e.target.value)}
+              onChange={(e) => { setBaseImageUrl(e.target.value); if(e.target.value) setBaseImageFile(null);}}
               className="mt-1"
               aria-label="Base Image URL"
+              disabled={!!baseImageFile}
             />
+            <div className="text-center my-2 text-sm text-muted-foreground">OR</div>
+            <Label htmlFor="baseImageFile" className="text-sm font-medium flex items-center"><FileImage className="mr-2 h-4 w-4" />Upload Base Image</Label>
+            <Input
+              id="baseImageFile"
+              type="file"
+              accept="image/*"
+              onChange={handleBaseFileChange}
+              className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+              aria-label="Upload Base Image"
+            />
+            {baseImageFile && <p className="text-xs text-muted-foreground mt-1">Selected: {baseImageFile.name}</p>}
           </div>
-          <div>
-            <Label htmlFor="actualImageUrl" className="text-sm font-medium">Actual Image URL</Label>
+
+          {/* Actual Image Section */}
+          <div className="space-y-4">
+            <Label htmlFor="actualImageUrl" className="text-sm font-medium flex items-center"><Link className="mr-2 h-4 w-4" />Actual Image URL</Label>
             <Input
               id="actualImageUrl"
               type="url"
               placeholder="https://placehold.co/600x400.png"
               value={actualImageUrl}
-              onChange={(e) => setActualImageUrl(e.target.value)}
+              onChange={(e) => {setActualImageUrl(e.target.value); if(e.target.value) setActualImageFile(null);}}
               className="mt-1"
               aria-label="Actual Image URL"
+              disabled={!!actualImageFile}
             />
+             <div className="text-center my-2 text-sm text-muted-foreground">OR</div>
+            <Label htmlFor="actualImageFile" className="text-sm font-medium flex items-center"><FileImage className="mr-2 h-4 w-4" />Upload Actual Image</Label>
+            <Input
+              id="actualImageFile"
+              type="file"
+              accept="image/*"
+              onChange={handleActualFileChange}
+              className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+              aria-label="Upload Actual Image"
+            />
+            {actualImageFile && <p className="text-xs text-muted-foreground mt-1">Selected: {actualImageFile.name}</p>}
           </div>
         </div>
         <Button onClick={handleCompare} disabled={isLoading} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -214,7 +280,7 @@ Please verify the URLs and ensure they point directly to image files. (Details: 
                 style={{ objectFit: 'contain' }} 
                 className="rounded-b-lg" 
                 data-ai-hint="abstract photo" 
-                onError={() => { setError(`Failed to load base image from ${displayBaseUrl}. Check URL and CORS policy.`); setDisplayBaseUrl(null);}}
+                onError={() => { setError(`Failed to load base image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayBaseUrl(null);}}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -237,7 +303,7 @@ Please verify the URLs and ensure they point directly to image files. (Details: 
                 style={{ objectFit: 'contain' }} 
                 className="rounded-b-lg" 
                 data-ai-hint="abstract pattern" 
-                onError={() => { setError(`Failed to load actual image from ${displayActualUrl}. Check URL and CORS policy.`); setDisplayActualUrl(null);}}
+                onError={() => { setError(`Failed to load actual image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayActualUrl(null);}}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
