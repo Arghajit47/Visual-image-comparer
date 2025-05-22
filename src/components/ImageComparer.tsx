@@ -271,13 +271,15 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           <CardHeader>
             <CardTitle>Base Image</CardTitle>
           </CardHeader>
-          <CardContent className="aspect-[4/3] relative bg-muted rounded-b-lg overflow-hidden">
+          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden">
             {displayBaseUrl ? (
               <Image 
                 src={displayBaseUrl} 
                 alt="Base" 
-                fill 
-                style={{ objectFit: 'contain' }} 
+                width={0}
+                height={0}
+                sizes="(max-width: 767px) 100vw, 33vw"
+                style={{ width: '100%', height: 'auto', objectFit: 'contain' }} 
                 className="rounded-b-lg" 
                 data-ai-hint="abstract photo" 
                 onError={() => { setError(`Failed to load base image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayBaseUrl(null);}}
@@ -294,13 +296,15 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           <CardHeader>
             <CardTitle>Actual Image</CardTitle>
           </CardHeader>
-          <CardContent className="aspect-[4/3] relative bg-muted rounded-b-lg overflow-hidden">
+          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden">
             {displayActualUrl ? (
               <Image 
                 src={displayActualUrl} 
                 alt="Actual" 
-                fill 
-                style={{ objectFit: 'contain' }} 
+                width={0}
+                height={0}
+                sizes="(max-width: 767px) 100vw, 33vw"
+                style={{ width: '100%', height: 'auto', objectFit: 'contain' }} 
                 className="rounded-b-lg" 
                 data-ai-hint="abstract pattern" 
                 onError={() => { setError(`Failed to load actual image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.`); setDisplayActualUrl(null);}}
@@ -317,13 +321,15 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           <CardHeader>
             <CardTitle>Difference</CardTitle>
           </CardHeader>
-          <CardContent className="aspect-[4/3] relative bg-muted rounded-b-lg overflow-hidden">
+          <CardContent className="min-h-60 relative bg-muted rounded-b-lg overflow-hidden">
             {diffImageUrl ? (
               <Image 
                 src={diffImageUrl} 
                 alt="Difference" 
-                fill 
-                style={{ objectFit: 'contain' }} 
+                width={0}
+                height={0}
+                sizes="(max-width: 767px) 100vw, 33vw"
+                style={{ width: '100%', height: 'auto', objectFit: 'contain' }} 
                 className="rounded-b-lg"
                 data-ai-hint="colorful difference"
               />
