@@ -70,13 +70,28 @@ export default function ImageComparer() {
         .compareTo(actualImageUrl)
         .onComplete(function(data: ResembleAnalysisData) {
           if (data.error) {
-            console.error("Resemble.js analysis error:", data.error);
-            let resembleErrorMessage = `Resemble.js analysis failed: ${String(data.error)}`;
-            const errorString = String(data.error).toLowerCase();
-            if (errorString.includes("networkerror") || errorString.includes("failed to fetch") || errorString.includes("cors") || errorString.includes("img not loaded")) {
-                 resembleErrorMessage = `Image loading failed for Resemble.js (URL invalid, network issue, or CORS policy): ${String(data.error)}`;
+            console.error("Resemble.js analysis error object:", data.error); // Log the raw error
+
+            let errorDetailString = String(data.error);
+            // Clean up common noise like "[object Event]" or "[object ProgressEvent]" from the error string
+            errorDetailString = errorDetailString.replace(/\.?\s*\[object Event\]$/i, '').trim();
+            errorDetailString = errorDetailString.replace(/\.?\s*\[object ProgressEvent\]$/i, '').trim();
+
+            let userFriendlyMessage = `Image comparison failed. Resemble.js reported: "${errorDetailString}".`;
+            const lowerErrorDetail = errorDetailString.toLowerCase();
+
+            if (lowerErrorDetail.includes("failed to load") ||
+                lowerErrorDetail.includes("networkerror") ||
+                lowerErrorDetail.includes("cors") ||
+                lowerErrorDetail.includes("img not loaded")) {
+              userFriendlyMessage = `Failed to load one of the images for comparison. This can happen if:
+1. The URL is not a direct link to an image file (e.g., it's a webpage displaying the image).
+2. The image server has CORS restrictions preventing access from other websites.
+3. There's a network issue, or the URL is invalid or inaccessible.
+Please verify the URLs and ensure they point directly to image files. (Details: ${errorDetailString})`;
             }
-            setError(resembleErrorMessage);
+            
+            setError(userFriendlyMessage);
             setIsLoading(false);
             return;
           }
@@ -125,7 +140,7 @@ export default function ImageComparer() {
         setDiffImageUrl(null);
         setDifferencePercentage(null);
     }
-  }, [baseImageUrl, actualImageUrl, displayBaseUrl, displayActualUrl]);
+  }, [baseImageUrl, actualImageUrl, displayBaseUrl, displayActualUrl]); // Explicit semicolon for function expression assignment
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -170,7 +185,7 @@ export default function ImageComparer() {
         <Alert variant="destructive" className="mb-8 transition-opacity duration-300 ease-in-out">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription><pre className="whitespace-pre-wrap">{error}</pre></AlertDescription>
         </Alert>
       )}
 
