@@ -70,7 +70,7 @@ export default function ImageComparer() {
         .compareTo(actualImageUrl)
         .onComplete(function(data: ResembleAnalysisData) {
           if (data.error) {
-            console.error("Resemble.js analysis error object:", data.error); // Log the raw error
+            console.warn("Resemble.js analysis error object (raw):", data.error); // Log the raw error
 
             let errorDetailString = String(data.error);
             // Clean up common noise like "[object Event]" or "[object ProgressEvent]" from the error string
