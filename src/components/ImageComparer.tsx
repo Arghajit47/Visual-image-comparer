@@ -343,7 +343,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md: gap-6">
         <Card className="shadow-md transition-all duration-300 ease-in-out">
           <CardHeader>
             <CardTitle>Base Image</CardTitle>
