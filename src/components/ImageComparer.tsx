@@ -16,9 +16,9 @@ interface ResembleAnalysisData {
   misMatchPercentage: string;
   isSameDimensions: boolean;
   dimensionDifference: { width: number; height: number };
-  getImageDataUrl?: () => string; // Optional because it might not exist if images are identical or error
+  getImageDataUrl?: () => string;
   analysisTime: number;
-  error?: any;
+  error?: any; // Can be string or Error object or other types
 }
 
 export default function ImageComparer() {
@@ -38,8 +38,8 @@ export default function ImageComparer() {
     setError(null);
     setDiffImageUrl(null);
     setDifferencePercentage(null);
-    setDisplayBaseUrl(baseImageUrl);
-    setDisplayActualUrl(actualImageUrl);
+    setDisplayBaseUrl(baseImageUrl); // Display immediately
+    setDisplayActualUrl(actualImageUrl); // Display immediately
 
     if (!baseImageUrl || !actualImageUrl) {
       setError("Please provide both base and actual image URLs.");
@@ -48,6 +48,7 @@ export default function ImageComparer() {
     }
 
     try {
+      // Validate URLs before attempting to use them
       new URL(baseImageUrl);
       new URL(actualImageUrl);
     } catch (_) {
@@ -61,16 +62,21 @@ export default function ImageComparer() {
         errorColor: { red: 255, green: 0, blue: 255 }, // Magenta for differences
         errorType: "flatMap",
         transparency: 0.3,
-        largeImageThreshold: 0,
-        useCrossOrigin: true,
+        largeImageThreshold: 0, // Process large images fully
+        useCrossOrigin: true, // Important for loading external images
       });
 
       resemble(baseImageUrl)
         .compareTo(actualImageUrl)
-        .onComplete((data: ResembleAnalysisData) => {
+        .onComplete(function(data: ResembleAnalysisData) {
           if (data.error) {
-            console.error("Resemble.js error:", data.error);
-            setError(`Error analyzing images: ${String(data.error)}. This could be due to CORS issues or invalid image URLs.`);
+            console.error("Resemble.js analysis error:", data.error);
+            let resembleErrorMessage = `Resemble.js analysis failed: ${String(data.error)}`;
+            const errorString = String(data.error).toLowerCase();
+            if (errorString.includes("networkerror") || errorString.includes("failed to fetch") || errorString.includes("cors") || errorString.includes("img not loaded")) {
+                 resembleErrorMessage = `Image loading failed for Resemble.js (URL invalid, network issue, or CORS policy): ${String(data.error)}`;
+            }
+            setError(resembleErrorMessage);
             setIsLoading(false);
             return;
           }
@@ -81,30 +87,34 @@ export default function ImageComparer() {
           if (mismatch > 0 && data.getImageDataUrl) {
             setDiffImageUrl(data.getImageDataUrl());
           } else {
-            setDiffImageUrl(null);
+            setDiffImageUrl(null); // No diff image if no mismatch or error
           }
           setIsLoading(false);
         });
     } catch (e: unknown) {
-      console.error("Error during comparison setup:", e);
-      let errorMessage = "Failed to compare images.";
+      console.error("Error during comparison setup or execution:", e);
+      let specificErrorMessage: string | null = null;
+
       if (e instanceof Error) {
-        errorMessage += ` ${e.message}`;
-        if (e.message.toLowerCase().includes("cors")) {
-            errorMessage = "CORS error: Cannot load images from the provided URLs. Ensure the remote servers allow cross-origin requests (CORS headers). You might need to use a CORS proxy if you don't control the image servers.";
-        } else if (e.message.toLowerCase().includes("failed to fetch") || (e instanceof TypeError && e.message.toLowerCase().includes("networkerror"))) {
-            errorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
+        const lowerCaseMessage = e.message.toLowerCase();
+        if (lowerCaseMessage.includes("cors")) {
+          specificErrorMessage = "CORS error: Cannot load images. Ensure the remote servers allow cross-origin requests (CORS headers). You might need to use a CORS proxy.";
+        } else if (lowerCaseMessage.includes("failed to fetch") || (e instanceof TypeError && lowerCaseMessage.includes("networkerror"))) {
+          specificErrorMessage = "Network error or invalid image URL. Please check the URLs and your internet connection.";
+        } else {
+          specificErrorMessage = `Comparison error: ${e.message}`;
         }
       } else {
         const errorString = String(e).toLowerCase();
         if (errorString.includes("cors")) {
-            errorMessage = "CORS error: Cannot load images. Check server CORS policy.";
+          specificErrorMessage = "CORS error: Cannot load images. Check server CORS policy.";
         }
       }
-      setError(errorMessage);
+      
+      setError(specificErrorMessage || "Failed to compare images. An unknown error occurred.");
       setIsLoading(false);
     }
-  };
+  }; // Explicit semicolon for function expression assignment
 
   useEffect(() => {
     const baseChanged = displayBaseUrl !== null && baseImageUrl !== displayBaseUrl;
@@ -130,6 +140,7 @@ export default function ImageComparer() {
               value={baseImageUrl}
               onChange={(e) => setBaseImageUrl(e.target.value)}
               className="mt-1"
+              aria-label="Base Image URL"
             />
           </div>
           <div>
@@ -141,6 +152,7 @@ export default function ImageComparer() {
               value={actualImageUrl}
               onChange={(e) => setActualImageUrl(e.target.value)}
               className="mt-1"
+              aria-label="Actual Image URL"
             />
           </div>
         </div>
@@ -168,8 +180,8 @@ export default function ImageComparer() {
                 <p className="text-2xl font-semibold mb-1">
                 Difference: <span className="text-accent">{differencePercentage.toFixed(2)}%</span>
                 </p>
-                 {differencePercentage === 0 && <p className="text-lg text-muted-foreground">Images are identical.</p>}
             )}
+            {differencePercentage === 0 && <p className="text-lg text-muted-foreground">Images are identical.</p>}
         </div>
       )}
 
@@ -180,10 +192,18 @@ export default function ImageComparer() {
           </CardHeader>
           <CardContent className="aspect-[4/3] relative bg-muted rounded-b-lg overflow-hidden">
             {displayBaseUrl ? (
-              <Image src={displayBaseUrl} alt="Base" fill style={{ objectFit: 'contain' }} className="rounded-b-lg" data-ai-hint="abstract photo" onError={() => { setError(`Failed to load base image from ${displayBaseUrl}. Check URL and CORS policy.`); setDisplayBaseUrl(null);}}/>
+              <Image 
+                src={displayBaseUrl} 
+                alt="Base" 
+                fill 
+                style={{ objectFit: 'contain' }} 
+                className="rounded-b-lg" 
+                data-ai-hint="abstract photo" 
+                onError={() => { setError(`Failed to load base image from ${displayBaseUrl}. Check URL and CORS policy.`); setDisplayBaseUrl(null);}}
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <ImageIcon className="w-16 h-16 opacity-50" />
+                <ImageIcon className="w-16 h-16 opacity-50" aria-hidden="true" />
               </div>
             )}
           </CardContent>
@@ -195,10 +215,18 @@ export default function ImageComparer() {
           </CardHeader>
           <CardContent className="aspect-[4/3] relative bg-muted rounded-b-lg overflow-hidden">
             {displayActualUrl ? (
-              <Image src={displayActualUrl} alt="Actual" fill style={{ objectFit: 'contain' }} className="rounded-b-lg" data-ai-hint="abstract pattern" onError={() => { setError(`Failed to load actual image from ${displayActualUrl}. Check URL and CORS policy.`); setDisplayActualUrl(null);}}/>
+              <Image 
+                src={displayActualUrl} 
+                alt="Actual" 
+                fill 
+                style={{ objectFit: 'contain' }} 
+                className="rounded-b-lg" 
+                data-ai-hint="abstract pattern" 
+                onError={() => { setError(`Failed to load actual image from ${displayActualUrl}. Check URL and CORS policy.`); setDisplayActualUrl(null);}}
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <ImageIcon className="w-16 h-16 opacity-50" />
+                <ImageIcon className="w-16 h-16 opacity-50" aria-hidden="true" />
               </div>
             )}
           </CardContent>
@@ -210,10 +238,17 @@ export default function ImageComparer() {
           </CardHeader>
           <CardContent className="aspect-[4/3] relative bg-muted rounded-b-lg overflow-hidden">
             {diffImageUrl ? (
-              <Image src={diffImageUrl} alt="Difference" fill style={{ objectFit: 'contain' }} className="rounded-b-lg" data-ai-hint="colorful difference"/>
+              <Image 
+                src={diffImageUrl} 
+                alt="Difference" 
+                fill 
+                style={{ objectFit: 'contain' }} 
+                className="rounded-b-lg"
+                data-ai-hint="colorful difference"
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                 {isLoading && !error && (displayBaseUrl && displayActualUrl) ? <p className="text-sm">Generating diff...</p> : <ImageIcon className="w-16 h-16 opacity-50" />}
+                 {isLoading && !error && (displayBaseUrl && displayActualUrl) ? <p className="text-sm">Generating diff...</p> : <ImageIcon className="w-16 h-16 opacity-50" aria-hidden="true" />}
               </div>
             )}
           </CardContent>

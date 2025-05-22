@@ -1,4 +1,5 @@
-import ImageComparer from "@/components/ImageComparer";
+
+import ImageComparerLoader from '@/components/ImageComparerLoader';
 
 export default function Home() {
   return (
@@ -12,7 +13,7 @@ export default function Home() {
             Visually compare two images from URLs and instantly see the percentage of difference, along with a generated diff image.
           </p>
         </header>
-        <ImageComparer />
+        <ImageComparerLoader />
          <footer className="text-center mt-12 py-6 border-t border-border">
           <p className="text-sm text-muted-foreground">
             Powered by Next.js & Resemble.js. Designed with precision.
