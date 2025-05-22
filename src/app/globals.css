@@ -32,6 +32,9 @@ body {
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
+    --success: 145 58% 40%; /* Green for success states */
+    --success-foreground: 210 100% 98%; /* Text color on success background */
+
     --border: 210 20% 88%; /* Light gray border */
     --input: 210 20% 92%; /* Slightly lighter border for inputs */
     --ring: 207 89% 60%; /* Slightly darker primary blue for focus rings */
@@ -78,6 +81,9 @@ body {
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
+
+    --success: 150 50% 55%; /* Green for success states in dark mode */
+    --success-foreground: 210 100% 98%; /* Text color on success background in dark mode */
 
     --border: 210 20% 25%;
     --input: 210 20% 28%;

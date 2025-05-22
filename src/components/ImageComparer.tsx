@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import Image from "next/image";
 import resemble from "resemblejs";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, ImageIcon, FileImage, Link, Filter } from "lucide-react";
+import { Loader2, AlertCircle, ImageIcon, FileImage, Link as LinkIcon, Filter } from "lucide-react";
 
 // Define the structure of the data object from Resemble.js at the module level
 interface ResembleAnalysisData {
@@ -18,7 +18,7 @@ interface ResembleAnalysisData {
   dimensionDifference: { width: number; height: number };
   getImageDataUrl?: () => string;
   analysisTime: number;
-  error?: any; // Can be string or Error object or other types
+  error?: any; 
 }
 
 export default function ImageComparer() {
@@ -45,21 +45,21 @@ export default function ImageComparer() {
     });
   };
 
-  const handleBaseFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBaseFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setBaseImageFile(file);
-      setBaseImageUrl(""); // Clear URL if file is selected
+      setBaseImageUrl(""); 
     } else {
       setBaseImageFile(null);
     }
   };
 
-  const handleActualFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleActualFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setActualImageFile(file);
-      setActualImageUrl(""); // Clear URL if file is selected
+      setActualImageUrl(""); 
     } else {
       setActualImageFile(null);
     }
@@ -78,14 +78,14 @@ export default function ImageComparer() {
       if (baseImageFile) {
         sourceBase = await readFileAsDataURL(baseImageFile);
       } else if (baseImageUrl) {
-        new URL(baseImageUrl); // Validate URL
+        new URL(baseImageUrl); 
         sourceBase = baseImageUrl;
       }
 
       if (actualImageFile) {
         sourceActual = await readFileAsDataURL(actualImageFile);
       } else if (actualImageUrl) {
-        new URL(actualImageUrl); // Validate URL
+        new URL(actualImageUrl); 
         sourceActual = actualImageUrl;
       }
 
@@ -95,15 +95,15 @@ export default function ImageComparer() {
         return;
       }
 
-      setDisplayBaseUrl(sourceBase as string); // Assuming sourceBase and sourceActual will be strings for display
+      setDisplayBaseUrl(sourceBase as string); 
       setDisplayActualUrl(sourceActual as string);
 
       resemble.outputSettings({
-        errorColor: { red: 255, green: 0, blue: 255 }, // Magenta for differences
+        errorColor: { red: 255, green: 0, blue: 255 }, 
         errorType: "flatMap",
         transparency: 0.3,
         largeImageThreshold: 0,
-        useCrossOrigin: true, // Important for URL-based images
+        useCrossOrigin: true, 
       });
 
       resemble(sourceBase)
@@ -113,7 +113,6 @@ export default function ImageComparer() {
             console.warn("Resemble.js analysis error object (raw):", data.error);
 
             let errorDetailString = String(data.error);
-            // Clean up common noise like "[object Event]" or "[object ProgressEvent]"
             errorDetailString = errorDetailString.replace(/\.?\s*\[object Event\]$/i, '').trim();
             errorDetailString = errorDetailString.replace(/\.?\s*\[object ProgressEvent\]$/i, '').trim();
             
@@ -142,7 +141,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           if (mismatch > 0 && data.getImageDataUrl) {
             setDiffImageUrl(data.getImageDataUrl());
           } else {
-            setDiffImageUrl(null); // No difference or no diff image generated
+            setDiffImageUrl(null); 
           }
           setIsLoading(false);
         });
@@ -160,7 +159,6 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
           specificErrorMessage = `Comparison error: ${e.message}`;
         }
       } else {
-        // Fallback for non-Error objects
         const errorString = String(e).toLowerCase();
         if (errorString.includes("cors")){
             specificErrorMessage = "CORS error: Cannot load images. Check server CORS policy.";
@@ -176,19 +174,15 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
     const baseSourceIsFile = !!baseImageFile;
     const actualSourceIsFile = !!actualImageFile;
 
-    // Check if the displayed URL matches the input URL (if not a file)
     const baseDisplayMatchesInput = !baseSourceIsFile && displayBaseUrl === baseImageUrl;
     const actualDisplayMatchesInput = !actualSourceIsFile && displayActualUrl === actualImageUrl;
 
-    // If source is a file, the display URL will be a data URL, so it won't match the input URL field.
-    // We only care if the input URL changed while a data URL (from file) is NOT being shown.
     const baseInputUrlChanged = !baseSourceIsFile && displayBaseUrl && displayBaseUrl !== baseImageUrl;
     const actualInputUrlChanged = !actualSourceIsFile && displayActualUrl && displayActualUrl !== actualImageUrl;
     
-    // Reset diff if the file selection changes, or if an input URL changes (and it's not already displaying that URL)
     if (
-      (baseSourceIsFile && (!displayBaseUrl || !displayBaseUrl.startsWith('data:'))) || // Base file selected, but display isn't data URL
-      (actualSourceIsFile && (!displayActualUrl || !displayActualUrl.startsWith('data:'))) || // Actual file selected
+      (baseSourceIsFile && (!displayBaseUrl || !displayBaseUrl.startsWith('data:'))) || 
+      (actualSourceIsFile && (!displayActualUrl || !displayActualUrl.startsWith('data:'))) || 
       baseInputUrlChanged ||
       actualInputUrlChanged
     ) {
@@ -202,9 +196,9 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
     <div className="container mx-auto p-4 md:p-8">
       <Card className="mb-8 p-6 shadow-lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8 mb-6">
-          {/* Base Image Section */}
+          
           <div className="space-y-4">
-            <Label htmlFor="baseImageUrl" className="text-sm font-medium flex items-center"><Link className="mr-2 h-4 w-4" />Base Image URL</Label>
+            <Label htmlFor="baseImageUrl" className="text-sm font-medium flex items-center"><LinkIcon className="mr-2 h-4 w-4" />Base Image URL</Label>
             <Input
               id="baseImageUrl"
               type="url"
@@ -228,9 +222,9 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
             {baseImageFile && <p className="text-xs text-muted-foreground mt-1">Selected: {baseImageFile.name}</p>}
           </div>
 
-          {/* Actual Image Section */}
+          
           <div className="space-y-4">
-            <Label htmlFor="actualImageUrl" className="text-sm font-medium flex items-center"><Link className="mr-2 h-4 w-4" />Actual Image URL</Label>
+            <Label htmlFor="actualImageUrl" className="text-sm font-medium flex items-center"><LinkIcon className="mr-2 h-4 w-4" />Actual Image URL</Label>
             <Input
               id="actualImageUrl"
               type="url"
@@ -307,7 +301,7 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
                 Status: Failed
               </p>
             ) : (
-              <p className="text-lg text-primary font-semibold mt-1">
+              <p className="text-lg text-success font-semibold mt-1">
                 Status: Passed
               </p>
             )}
