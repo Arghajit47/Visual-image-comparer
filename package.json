@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "backend:build": "chmod +x render.sh && ./render.sh"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",
