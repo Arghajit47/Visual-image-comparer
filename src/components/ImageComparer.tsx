@@ -212,9 +212,10 @@ Please verify the URLs/files and ensure they point directly to image files. (Det
 
   const handleDownloadDiffImage = () => {
     if (diffImageUrl) {
-      const link = document.createElement('a');
+      const date = Date.now();
+      const link = document.createElement("a");
       link.href = diffImageUrl;
-      link.download = 'diff-image.png';
+      link.download = `diff-image-${date}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
