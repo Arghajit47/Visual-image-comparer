@@ -251,6 +251,7 @@ git push origin main
 ```
 
 **Features:**
+
 - ✅ Zero-config serverless functions
 - ✅ Automatic HTTPS
 - ✅ Preview deployments for PRs
@@ -307,6 +308,7 @@ visual-image-comparer/
 | **Performance** | `maxDimension`, `timeout`, `earlyExit` | Performance tuning |
 
 **Example:**
+
 ```json
 {
   "options": {

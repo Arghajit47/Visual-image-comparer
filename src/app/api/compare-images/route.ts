@@ -291,15 +291,26 @@ export async function POST(request: NextRequest) {
     const { width, height } = img1;
     const diffData = Buffer.alloc(width * height * 4);
     
-    const pixelmatchOptions = {
+    const pixelmatchOptions: any = {
       threshold: options?.pixelmatch?.threshold ?? 0.1,
       includeAA: options?.pixelmatch?.includeAA ?? false,
-      alpha: options?.pixelmatch?.alpha ?? 0.1,
-      aaColor: options?.pixelmatch?.aaColor,
-      diffColor: options?.pixelmatch?.diffColor,
-      diffColorAlt: options?.pixelmatch?.diffColorAlt,
-      diffMask: options?.pixelmatch?.diffMask ?? false,
     };
+    
+    if (options?.pixelmatch?.alpha !== undefined) {
+      pixelmatchOptions.alpha = options.pixelmatch.alpha;
+    }
+    if (options?.pixelmatch?.aaColor) {
+      pixelmatchOptions.aaColor = options.pixelmatch.aaColor;
+    }
+    if (options?.pixelmatch?.diffColor) {
+      pixelmatchOptions.diffColor = options.pixelmatch.diffColor;
+    }
+    if (options?.pixelmatch?.diffColorAlt) {
+      pixelmatchOptions.diffColorAlt = options.pixelmatch.diffColorAlt;
+    }
+    if (options?.pixelmatch?.diffMask !== undefined) {
+      pixelmatchOptions.diffMask = options.pixelmatch.diffMask;
+    }
 
     const numDiffPixels = pixelmatch(
       img1.data,
