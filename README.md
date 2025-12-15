@@ -7,7 +7,7 @@
 [![ResembleJS](https://img.shields.io/badge/ResembleJS-5.0-orange)](https://github.com/rsmbl/Resemble.js)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-[Live Demo](https://visual-test.netlify.app/) • [Features](#-features) • [Quick Start](#-quick-start) • [Deployment](#-deployment)
+[Live Demo](https://visual-test.netlify.app/) • [Features](#-features) • [Quick Start](#-quick-start) • [API Config](API_CONFIG.md) • [Deployment](DEPLOYMENT.md)
 
 ---
 
@@ -117,6 +117,8 @@
 
 ## 🚀 Quick Start
 
+> **📚 New to the project?** Check out [DEPLOYMENT.md](DEPLOYMENT.md) for production deployment guide!
+
 ### Prerequisites
 
 ```bash
@@ -181,6 +183,8 @@ NODE_ENV=development
 
 ### 3️⃣ **API Integration**
 
+> **🎛️ Full API Documentation**: See [API_CONFIG.md](API_CONFIG.md) for all configuration options!
+
 ```bash
 POST /api/compare-images
 Content-Type: application/json
@@ -190,11 +194,18 @@ Content-Type: application/json
   "actualImageSource": "https://example.com/image.png",
   "threshold": 5,
   "options": {
-    "errorColor": { "red": 255, "green": 0, "blue": 255 },
-    "errorType": "flat",
-    "transparency": 0.3,
-    "scaleToSameSize": true,
-    "ignoreAntialiasing": true
+    "pixelmatch": {
+      "threshold": 0.1,
+      "diffColor": [255, 0, 255]
+    },
+    "resize": {
+      "enabled": true,
+      "strategy": "fill"
+    },
+    "output": {
+      "format": "png",
+      "includeMetadata": true
+    }
   }
 }
 ```
@@ -206,6 +217,10 @@ Content-Type: application/json
   "differencePercentage": 2.45,
   "status": "Passed",
   "diffImageUrl": "data:image/png;base64,...",
+  "metadata": {
+    "baseImage": { "width": 1920, "height": 1080 },
+    "comparison": { "totalPixels": 2073600, "diffPixels": 50803 }
+  },
   "error": null
 }
 ```
@@ -214,25 +229,33 @@ Content-Type: application/json
 
 ## 🌐 Deployment
 
-See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete step-by-step guide.
+> **📖 Complete Guide**: See **[DEPLOYMENT.md](DEPLOYMENT.md)** for detailed instructions!
 
-### Quick Deploy Summary
+### Single-Platform Deploy (Netlify)
 
-#### **Backend (Render)**
-
-```bash
-# Automatic deployment via render.yaml
-# Installs canvas dependencies via render.sh
-# Exposes /api/health and /api/compare-images
-```
-
-#### **Frontend (Netlify)**
+**Frontend + Serverless API in one deployment!**
 
 ```bash
-# Build command: npm run build
-# Publish directory: .next
-# Environment: NEXT_PUBLIC_API_URL
+# 1. Push to GitHub
+git push origin main
+
+# 2. Connect to Netlify
+# Dashboard → New site → Import from Git
+
+# 3. Auto-configured via netlify.toml
+# Build: npm run build
+# Publish: .next
+# Functions: Automatic (Next.js API routes)
+
+# 4. Deploy! ✅
 ```
+
+**Features:**
+- ✅ Zero-config serverless functions
+- ✅ Automatic HTTPS
+- ✅ Preview deployments for PRs
+- ✅ 100GB bandwidth/month (free)
+- ✅ Support for all image formats (PNG, JPEG, WebP, GIF, SVG, AVIF, TIFF)
 
 ---
 
@@ -259,12 +282,11 @@ visual-image-comparer/
 │       └── utils.ts                  # Utility functions
 ├── .env.example                      # Environment template
 ├── .env.local                        # Local environment (git-ignored)
-├── Dockerfile                        # Docker configuration
-├── render.yaml                       # Render deployment config
-├── render.sh                         # Canvas dependency installer
-├── netlify.toml                      # Netlify config
+├── netlify.toml                      # Netlify config (serverless)
 ├── package.json                      # Dependencies
 ├── tsconfig.json                     # TypeScript config
+├── API_CONFIG.md                     # 🎛️ API configuration guide
+├── DEPLOYMENT.md                     # 🚀 Deployment instructions
 └── README.md                         # You are here!
 ```
 
@@ -272,20 +294,28 @@ visual-image-comparer/
 
 ## 🔧 Configuration Options
 
-### ResembleJS Options
+> **📖 Full Documentation**: See [API_CONFIG.md](API_CONFIG.md) for comprehensive configuration guide!
 
-| Option                 | Type      | Default       | Description                                            |
-| ---------------------- | --------- | ------------- | ------------------------------------------------------ |
-| `errorColor`           | `{r,g,b}` | `{255,0,255}` | Color for diff highlighting                            |
-| `errorType`            | `string`  | `'flat'`      | `'flat'`, `'movement'`, or `'flatDifferenceIntensity'` |
-| `transparency`         | `number`  | `0.3`         | Diff overlay opacity (0.0-1.0)                         |
-| `largeImageThreshold`  | `number`  | `1200`        | Pixel threshold for performance optimization           |
-| `useCrossOrigin`       | `boolean` | `true`        | Enable CORS image loading                              |
-| `scaleToSameSize`      | `boolean` | `false`       | Auto-resize images                                     |
-| `ignoreAntialiasing`   | `boolean` | `false`       | Ignore anti-aliasing differences                       |
-| `ignoreColors`         | `boolean` | `false`       | Compare grayscale only                                 |
-| `ignoreAlpha`          | `boolean` | `false`       | Ignore transparency channel                            |
-| `returnEarlyThreshold` | `number`  | `0`           | Stop early if mismatch exceeds value                   |
+### Quick Reference
+
+| Category | Options | Description |
+|----------|---------|-------------|
+| **Pixelmatch** | `threshold`, `diffColor`, `includeAA` | Comparison algorithm settings |
+| **Resize** | `enabled`, `strategy`, `width`, `height` | Auto-resize configuration |
+| **Output** | `format`, `includeMetadata`, `includeDiffBounds` | Response customization |
+| **Quality** | `png`, `jpeg`, `webp` | Output image quality |
+| **Performance** | `maxDimension`, `timeout`, `earlyExit` | Performance tuning |
+
+**Example:**
+```json
+{
+  "options": {
+    "pixelmatch": { "threshold": 0.1, "diffColor": [255, 0, 255] },
+    "resize": { "enabled": true, "strategy": "fill" },
+    "output": { "format": "png", "includeMetadata": true }
+  }
+}
+```
 
 ---
 
@@ -349,6 +379,14 @@ Contributions are welcome! Please follow these steps:
 3. Commit changes: `git commit -m 'Add amazing feature'`
 4. Push to branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
+
+---
+
+## 📚 Documentation
+
+- **[README.md](README.md)** - You are here! Project overview and quick start
+- **[API_CONFIG.md](API_CONFIG.md)** - Complete API configuration reference
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide
 
 ---
 

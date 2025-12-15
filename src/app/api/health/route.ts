@@ -14,23 +14,33 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
-  let canvasAvailable = false;
-  let canvasError = null;
+  let sharpAvailable = false;
+  let sharpError = null;
+  let sharpVersion = null;
 
   try {
-    require("resemblejs");
-    canvasAvailable = true;
+    const sharp = require("sharp");
+    sharpAvailable = true;
+    sharpVersion = sharp.versions?.sharp || 'unknown';
   } catch (error: any) {
-    canvasError = error.message;
+    sharpError = error.message;
   }
 
   return NextResponse.json({
     status: "ok",
     message: "Image comparison API health check",
     timestamp: new Date().toISOString(),
-    canvas: {
-      available: canvasAvailable,
-      error: canvasError,
+    environment: "Netlify Serverless Function",
+    imageProcessing: {
+      library: "sharp",
+      available: sharpAvailable,
+      version: sharpVersion,
+      error: sharpError,
+      supportedFormats: ["PNG", "JPEG", "WebP", "GIF", "AVIF", "TIFF", "SVG"],
+    },
+    comparison: {
+      library: "pixelmatch",
+      algorithm: "pixel-by-pixel",
     },
     nodeVersion: process.version,
     platform: process.platform,
