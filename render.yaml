@@ -1,16 +1,12 @@
 services:
   - type: web
     name: visual-image-comparer-api
-    runtime: node
+    runtime: docker
     region: oregon
     plan: free
-    buildCommand: bash render.sh
-    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NODE_VERSION
-        value: 22.8.0
       - key: ALLOWED_ORIGIN
         sync: false
     healthCheckPath: /api/health

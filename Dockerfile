@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 COPY . .
 RUN npm run build
@@ -21,6 +21,3 @@ ENV PORT=3000
 EXPOSE 3000
 
 CMD ["npm", "run", "start"]
-
-
-# Failed to load base image. If using a URL, check URL and CORS policy. If uploaded, the file might be corrupted.
