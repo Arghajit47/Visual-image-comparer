@@ -1,0 +1,21 @@
+{
+  "baseImageSource": "string",
+  "actualImageSource": "string",
+  "threshold": "number (optional, default: 0)",
+  "options": {
+    "errorColor": {
+      "red": "number (optional, 0-255, default: 255)",
+      "green": "number (optional, 0-255, default: 0)",
+      "blue": "number (optional, 0-255, default: 255)"
+    },
+    "errorType": "string (optional, values: 'flat' | 'movement' | 'flatDifferenceIntensity' | 'movementDifferenceIntensity' | 'diffOnly', default: 'flat')",
+    "transparency": "number (optional, 0-1, default: 0.3)",
+    "largeImageThreshold": "number (optional, default: 0)",
+    "useCrossOrigin": "boolean (optional, default: false)",
+    "scaleToSameSize": "boolean (optional, default: false)",
+    "ignoreAntialiasing": "boolean (optional, default: false)",
+    "ignoreColors": "boolean (optional, default: false)",
+    "ignoreAlpha": "boolean (optional, default: false)",
+    "returnEarlyThreshold": "number (optional, 0-100, default: 0)"
+  }
+}

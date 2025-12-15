@@ -1,6 +1,13 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
-import resemble, { type OutputSettings } from 'resemblejs';
+import type { OutputSettings } from 'resemblejs';
+
+let resemble: any;
+try {
+  resemble = require('resemblejs');
+} catch (error) {
+  console.error('Failed to load resemblejs (canvas dependency issue):', error);
+}
 
 // Define the structure of the data object from Resemble.js
 // Note: In Resemble.js, misMatchPercentage in the callback is typically a number.
@@ -18,6 +25,22 @@ interface CompareImagesRequestBody {
   baseImageSource?: string;
   actualImageSource?: string;
   threshold?: number;
+  options?: {
+    errorColor?: {
+      red?: number;
+      green?: number;
+      blue?: number;
+    };
+    errorType?: string;
+    transparency?: number;
+    largeImageThreshold?: number;
+    useCrossOrigin?: boolean;
+    scaleToSameSize?: boolean;
+    ignoreAntialiasing?: boolean;
+    ignoreColors?: boolean;
+    ignoreAlpha?: boolean;
+    returnEarlyThreshold?: number;
+  };
 }
 
 interface CompareImagesResponseBody {
@@ -27,20 +50,50 @@ interface CompareImagesResponseBody {
   error: string | null;
 }
 
-// Configure Resemble.js output settings globally for this API route
-const resembleOutputSettings: OutputSettings = {
-  errorColor: { red: 255, green: 0, blue: 255 }, // Pink for differences
-  errorType: 'flatMap' as any, // Use type assertion to allow 'flatMap'
-  transparency: 0.3,
-  largeImageThreshold: 0, // Process large images without downscaling
-  // useCrossOrigin: true, // Not applicable for server-side URL fetching like this
+// Configure Resemble.js output settings dynamically based on options
+const getResembleOutputSettings = (options?: CompareImagesRequestBody['options']): OutputSettings => {
+  return {
+    errorColor: {
+      red: options?.errorColor?.red ?? 255,
+      green: options?.errorColor?.green ?? 0,
+      blue: options?.errorColor?.blue ?? 255,
+    },
+    errorType: (options?.errorType ?? 'flat') as any,
+    transparency: options?.transparency ?? 0.3,
+    largeImageThreshold: options?.largeImageThreshold ?? 0,
+    useCrossOrigin: options?.useCrossOrigin ?? false,
+  };
 };
-resemble.outputSettings(resembleOutputSettings);
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
+    if (!resemble) {
+      return NextResponse.json(
+        {
+          differencePercentage: null,
+          status: null,
+          diffImageUrl: null,
+          error: 'Server-side image comparison is not available due to missing canvas dependencies. Please use client-side comparison instead.',
+        } as CompareImagesResponseBody,
+        { status: 503, headers: corsHeaders }
+      );
+    }
+
     const body = (await request.json()) as CompareImagesRequestBody;
-    const { baseImageSource, actualImageSource, threshold = 0 } = body;
+    const { baseImageSource, actualImageSource, threshold = 0, options } = body;
 
     if (!baseImageSource || !actualImageSource) {
       return NextResponse.json(
@@ -50,7 +103,7 @@ export async function POST(request: NextRequest) {
           diffImageUrl: null,
           error: 'Both baseImageSource and actualImageSource are required.',
         } as CompareImagesResponseBody,
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -63,14 +116,37 @@ export async function POST(request: NextRequest) {
             diffImageUrl: null,
             error: 'Invalid threshold value. Must be a number between 0 and 100.',
           } as CompareImagesResponseBody,
-          { status: 400 }
+          { status: 400, headers: corsHeaders }
         );
     }
 
+    const resembleSettings = getResembleOutputSettings(options);
+    resemble.outputSettings(resembleSettings);
+
     const comparisonResult = await new Promise<CompareImagesResponseBody>((resolve) => {
-      resemble(baseImageSource)
-        .compareTo(actualImageSource)
-        .onComplete(function (data: ResembleAnalysisData) {
+      let comparison = resemble(baseImageSource).compareTo(actualImageSource);
+      
+      if (options?.scaleToSameSize) {
+        comparison = comparison.scaleToSameSize();
+      }
+      
+      if (options?.ignoreAntialiasing) {
+        comparison = comparison.ignoreAntialiasing();
+      }
+      
+      if (options?.ignoreColors) {
+        comparison = comparison.ignoreColors();
+      }
+      
+      if (options?.ignoreAlpha) {
+        comparison = comparison.ignoreAlpha();
+      }
+      
+      if (options?.returnEarlyThreshold && options.returnEarlyThreshold > 0) {
+        comparison = comparison.setReturnEarlyThreshold(options.returnEarlyThreshold);
+      }
+      
+      comparison.onComplete(function (data: ResembleAnalysisData) {
           if (data.error) {
             console.error('Resemble.js analysis error (API):', data.error);
             let errorDetailString = String(data.error);
@@ -130,11 +206,15 @@ export async function POST(request: NextRequest) {
     });
 
     if (comparisonResult.error) {
-        // If Resemble.js itself had an error (e.g. image load failure),
-        // it might be a client error (bad URL) or server misconfiguration
-        return NextResponse.json(comparisonResult, { status: comparisonResult.error.startsWith("Failed to load") ? 400 : 500 });
+        return NextResponse.json(comparisonResult, { 
+          status: comparisonResult.error.startsWith("Failed to load") ? 400 : 500,
+          headers: corsHeaders,
+        });
     }
-    return NextResponse.json(comparisonResult, { status: 200 });
+    return NextResponse.json(comparisonResult, { 
+      status: 200,
+      headers: corsHeaders,
+    });
 
   } catch (e: unknown) {
     console.error('API error in /api/compare-images:', e);
@@ -143,14 +223,14 @@ export async function POST(request: NextRequest) {
         errorMessage = 'Invalid JSON payload provided.';
         return NextResponse.json({ 
           differencePercentage: null, status: null, diffImageUrl: null, error: errorMessage 
-        } as CompareImagesResponseBody, { status: 400 });
+        } as CompareImagesResponseBody, { status: 400, headers: corsHeaders });
     } else if (e instanceof Error) {
         // Specific check for canvas/system library issues
         if (e.message.toLowerCase().includes('canvas') || e.message.toLowerCase().includes('.so')) {
             errorMessage = `Server-side image processing error: ${e.message}. This might be due to missing system dependencies for the 'canvas' library on the server.`;
              return NextResponse.json({ 
               differencePercentage: null, status: null, diffImageUrl: null, error: errorMessage 
-            } as CompareImagesResponseBody, { status: 500 });
+            } as CompareImagesResponseBody, { status: 500, headers: corsHeaders });
         }
         errorMessage = e.message;
     }
@@ -162,7 +242,7 @@ export async function POST(request: NextRequest) {
         diffImageUrl: null,
         error: errorMessage,
       } as CompareImagesResponseBody,
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
