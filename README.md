@@ -73,9 +73,9 @@
 
 ```bash
 ┌─────────────────────────────────────────────────────────────┐
-│                      Frontend (Netlify)                     │
+│                   Full Stack (Netlify)                      │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  Next.js 15.5 + React 18 + TypeScript                │  │
+│  │  Frontend - Next.js 15.5 + React 18 + TypeScript     │  │
 │  │  ├── Client-side ResembleJS (Browser)                │  │
 │  │  ├── Shadcn/ui Components                            │  │
 │  │  ├── Tailwind CSS                                    │  │
@@ -83,19 +83,12 @@
 │  └──────────────────────────────────────────────────────┘  │
 │                          ↕ HTTPS                            │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  API Routes (Optional Server-side)                   │  │
+│  │  Serverless API Routes (Netlify Functions)           │  │
 │  │  ├── /api/health - Health check endpoint            │  │
-│  │  └── /api/compare-images - Server comparison        │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                             ↕
-┌─────────────────────────────────────────────────────────────┐
-│                     Backend (Render)                        │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  Node.js 22.8 + ResembleJS + node-canvas            │  │
-│  │  ├── Cairo Graphics Library                          │  │
-│  │  ├── CORS-enabled API                                │  │
-│  │  └── System Dependencies via render.sh               │  │
+│  │  ├── /api/compare-images - Image comparison         │  │
+│  │  ├── Sharp (image processing)                        │  │
+│  │  ├── Pixelmatch (comparison algorithm)              │  │
+│  │  └── CORS-enabled responses                          │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -107,11 +100,12 @@
 | **Frontend**        | Next.js 15.5     | React framework with App Router      |
 | **UI Library**      | Shadcn/ui        | Accessible component system          |
 | **Styling**         | Tailwind CSS     | Utility-first CSS framework          |
-| **Image Analysis**  | ResembleJS 5.0   | Pixel comparison engine              |
-| **Backend Runtime** | Node.js 22.8     | Server-side JavaScript               |
-| **Graphics**        | node-canvas      | Canvas API for server-side rendering |
+| **Image Analysis**  | ResembleJS 5.0   | Client-side pixel comparison         |
+| **API**             | Next.js Routes   | Serverless API endpoints             |
+| **Image Processing**| Sharp            | Server-side image manipulation       |
+| **Comparison**      | Pixelmatch       | Server-side pixel comparison         |
 | **Type Safety**     | TypeScript 5.0   | Static type checking                 |
-| **Deployment**      | Netlify + Render | CDN + Backend hosting                |
+| **Deployment**      | Netlify          | CDN + Serverless Functions           |
 
 ---
 
@@ -150,11 +144,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Create `.env.local` in the root directory:
 
 ```bash
-# API Configuration (optional for client-side only)
+# API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:3000
 
-# CORS Configuration (backend)
-ALLOWED_ORIGIN=http://localhost:3000
+# CORS Configuration (optional)
+ALLOWED_ORIGIN=*
 
 # Node Environment
 NODE_ENV=development
@@ -231,7 +225,7 @@ Content-Type: application/json
 
 > **📖 Complete Guide**: See **[DEPLOYMENT.md](DEPLOYMENT.md)** for detailed instructions!
 
-### Single-Platform Deploy (Netlify)
+### Deploy to Netlify
 
 **Frontend + Serverless API in one deployment!**
 
@@ -338,26 +332,16 @@ curl http://localhost:3000/api/health
 
 ## 🐛 Troubleshooting
 
-### Canvas Dependencies (Render)
-
-**Issue**: `Error: Cannot find module 'canvas'`
-
-**Solution**:
-
-1. Ensure `render.sh` has execute permissions: `chmod +x render.sh`
-2. Verify build command in `render.yaml`: `bash render.sh`
-3. Check Render logs for system dependency installation
-
-### CORS Errors (Frontend)
+### CORS Errors
 
 **Issue**: `Access-Control-Allow-Origin` blocked
 
 **Solution**:
 
-1. Set `ALLOWED_ORIGIN` in Render to exact Netlify URL
+1. Set `ALLOWED_ORIGIN` environment variable in Netlify
 2. Ensure `https://` protocol is included
 3. Remove trailing slashes from URLs
-4. Check both endpoints have CORS headers
+4. Check API routes return proper CORS headers
 
 ### Large Image Performance
 
@@ -403,8 +387,9 @@ This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file
 - **[ResembleJS](https://github.com/rsmbl/Resemble.js)** - Powerful image analysis engine
 - **[Shadcn/ui](https://ui.shadcn.com/)** - Beautiful component library
 - **[Next.js](https://nextjs.org/)** - React framework
-- **[Render](https://render.com/)** - Backend hosting
-- **[Netlify](https://netlify.com/)** - Frontend hosting
+- **[Sharp](https://sharp.pixelplumbing.com/)** - High-performance image processing
+- **[Pixelmatch](https://github.com/mapbox/pixelmatch)** - Fast pixel comparison
+- **[Netlify](https://netlify.com/)** - Serverless deployment platform
 
 ---
 
