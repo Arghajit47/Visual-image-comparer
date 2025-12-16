@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "integration tests": "npm test src/app/api/__tests__/integration.test.ts",
+    "test:integration:coverage": "npm test src/app/api/__tests__/integration.test.ts -- --coverage",
+    "test:integration:watch": "npm test src/app/api/__tests__/integration.test.ts -- --watch"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.3",
