@@ -27,20 +27,35 @@ The `/api/compare-images` endpoint supports extensive configuration options for 
 
 Controls pixel comparison sensitivity and visualization.
 
+> **⚠️ Important**: All pixelmatch options are **optional**. Only include options you want to customize. Omitting options uses pixelmatch defaults.
+
 ```json
 {
   "options": {
     "pixelmatch": {
-      "threshold": 0.1, // Color difference threshold (0-1)
-      "includeAA": false, // Include anti-aliased pixels
-      "alpha": 0.1, // Opacity of unchanged pixels (0-1)
-      "diffColor": [255, 0, 255], // Magenta diff highlight
-      "aaColor": [255, 255, 0], // Yellow for AA pixels
-      "diffMask": false // Show only differences
+      "threshold": 0.1,          // Color difference threshold (0-1), default: 0.1
+      "includeAA": false,         // Include anti-aliased pixels, default: false
+      "alpha": 0.1,               // Opacity of unchanged pixels (0-1), optional
+      "diffColor": [255, 0, 255], // RGB array for diff highlight, optional
+      "aaColor": [255, 255, 0],   // RGB array for AA pixels, optional
+      "diffColorAlt": [0, 255, 0],// Alternative diff color RGB, optional
+      "diffMask": false           // Show only differences, optional
     }
   }
 }
 ```
+
+**Parameter Details:**
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `threshold` | number | 0.0-1.0 | 0.1 | Matching threshold (lower = stricter) |
+| `includeAA` | boolean | - | false | Include anti-aliased pixels in diff |
+| `alpha` | number | 0.0-1.0 | - | Blending opacity (0=invisible, 1=opaque) |
+| `diffColor` | [R,G,B] | 0-255 each | [255,0,0] | Main diff highlight color |
+| `aaColor` | [R,G,B] | 0-255 each | [255,255,0] | Anti-aliasing pixel color |
+| `diffColorAlt` | [R,G,B] | 0-255 each | - | Alternative diff color |
+| `diffMask` | boolean | - | false | Show only diffs (black background) |
 
 **Examples:**
 
@@ -56,7 +71,42 @@ curl -X POST http://localhost:3000/api/compare-images -d '{
 curl -X POST http://localhost:3000/api/compare-images -d '{
   "options": { "pixelmatch": { "diffColor": [255, 0, 0] } }
 }'
+
+# Custom colors with transparency
+curl -X POST http://localhost:3000/api/compare-images -d '{
+  "options": { 
+    "pixelmatch": { 
+      "diffColor": [255, 0, 255],
+      "aaColor": [255, 255, 0],
+      "alpha": 0.2
+    } 
+  }
+}'
+
+# Strict comparison (ignore anti-aliasing)
+curl -X POST http://localhost:3000/api/compare-images -d '{
+  "options": { 
+    "pixelmatch": { 
+      "threshold": 0.05,
+      "includeAA": false
+    } 
+  }
+}'
 ```
+
+**💡 Best Practices:**
+
+- **UI Testing**: Use `threshold: 0.01` + `includeAA: false` for strict pixel-perfect matching
+- **Screenshot Comparison**: Use `threshold: 0.1` + `includeAA: true` to ignore font rendering differences
+- **Photo Comparison**: Use `threshold: 0.2` for JPEG compression artifacts
+- **Debugging**: Use `diffMask: true` to see only differences on black background
+
+**⚠️ Common Pitfalls:**
+
+- ❌ **Don't** pass `undefined` values - omit the property entirely
+- ❌ **Don't** use string colors like `"#ff00ff"` - use RGB arrays `[255, 0, 255]`
+- ✅ **Do** omit optional parameters if you want defaults
+- ✅ **Do** validate RGB values are 0-255
 
 ---
 
@@ -324,6 +374,102 @@ curl -X POST http://localhost:3000/api/compare-images \
 
 ---
 
+---
+
+## 🐛 Troubleshooting
+
+### Error: "is not iterable (cannot read property undefined)"
+
+**Cause**: Invalid pixelmatch options (e.g., `undefined` passed for color arrays)
+
+**Solution**: Only include options you want to set, omit optional ones
+
+```json
+// ❌ Bad
+{
+  "options": {
+    "pixelmatch": {
+      "threshold": 0.1,
+      "diffColor": undefined  // ❌ Don't do this!
+    }
+  }
+}
+
+// ✅ Good
+{
+  "options": {
+    "pixelmatch": {
+      "threshold": 0.1
+      // Just omit diffColor!
+    }
+  }
+}
+
+// ✅ Also good (custom color)
+{
+  "options": {
+    "pixelmatch": {
+      "threshold": 0.1,
+      "diffColor": [255, 0, 255]  // ✅ RGB array
+    }
+  }
+}
+```
+
+### Error: "Image dimensions don't match"
+
+**Cause**: Images have different sizes and auto-resize is disabled
+
+**Solution**: Enable auto-resize or provide same-size images
+
+```json
+{
+  "options": {
+    "resize": { "enabled": true }
+  }
+}
+```
+
+### Error: "Invalid image source"
+
+**Cause**: Image source is not a valid data URI or HTTP(S) URL
+
+**Valid formats:**
+
+- ✅ `data:image/png;base64,iVBORw0KG...`
+- ✅ `https://example.com/image.jpg`
+- ❌ `./local/file.png` (file paths not supported)
+- ❌ `src/app/favicon.ico` (relative paths not supported)
+
+**Solution**: Convert local files to base64 or serve via HTTP
+
+### Error: "Failed to decode image"
+
+**Cause**: Corrupted image data or unsupported format
+
+**Solution**: Verify image is valid and in supported format (PNG, JPEG, WebP, GIF, SVG, AVIF, TIFF)
+
+### Error: "Task timed out after 10.00 seconds"
+
+**Cause**: Image processing exceeded Netlify function timeout (10s on free tier)
+
+**Solution**: Reduce image size or enable aggressive resizing
+
+```json
+{
+  "options": {
+    "resize": {
+      "width": 1280,
+      "height": 720
+    },
+    "output": { "format": "webp" },
+    "quality": { "webp": 60 }
+  }
+}
+```
+
+---
+
 ## 🔗 Related Documentation
 
 - [README.md](README.md) - Project overview
@@ -331,4 +477,17 @@ curl -X POST http://localhost:3000/api/compare-images \
 
 ---
 
-**Need help?** Open an issue on [GitHub](https://github.com/Arghajit47/visual-image-comparer/issues)!
+## 🆘 Support
+
+**Need help?**
+
+- Open an issue on [GitHub](https://github.com/YOUR_USERNAME/visual-image-comparer/issues)
+- Check [Discussions](https://github.com/YOUR_USERNAME/visual-image-comparer/discussions) for Q&A
+- Review existing [Issues](https://github.com/YOUR_USERNAME/visual-image-comparer/issues?q=is%3Aissue) for similar problems
+
+**Before opening an issue:**
+
+1. Check the troubleshooting section above
+2. Test with `/api/health` endpoint
+3. Include example request body
+4. Share error messages from browser console
