@@ -1,0 +1,39 @@
+{
+  "baseImageSource": "string (data URI or URL) - The reference/expected image to compare against",
+  "actualImageSource": "string (data URI or URL) - The test/actual image to compare",
+  "threshold": "number (optional, 0-100, default: 0) - Maximum acceptable difference percentage. Test fails if exceeded",
+  "options": {
+    "pixelmatch": {
+      "threshold": "number (optional, 0-1, default: 0.1) - Color difference sensitivity. Lower = stricter matching (0=exact match, 1=very tolerant)",
+      "includeAA": "boolean (optional, default: false) - Include anti-aliased pixels in comparison. Set false to ignore font smoothing differences",
+      "alpha": "number (optional, 0-1, default: 0.1) - Opacity of unchanged pixels in diff image (0=invisible, 1=fully visible)",
+      "aaColor": "[number, number, number] (optional, RGB 0-255) - Color for anti-aliased pixels in diff image (e.g., [255, 255, 0] for yellow)",
+      "diffColor": "[number, number, number] (optional, RGB 0-255, default: [255, 0, 0]) - Primary color for highlighting differences (e.g., [255, 0, 255] for magenta)",
+      "diffColorAlt": "[number, number, number] (optional, RGB 0-255) - Alternative color for differences with different brightness levels",
+      "diffMask": "boolean (optional, default: false) - Show only differences on black background (true) or full image with highlights (false)"
+    },
+    "resize": {
+      "enabled": "boolean (optional, default: true) - Auto-resize images to match dimensions. Disable to require exact size match",
+      "strategy": "string (optional, values: 'fit' | 'fill' | 'cover' | 'contain' | 'inside' | 'outside', default: 'fill') - Resize method: 'fill'=stretch, 'fit'=best fit, 'cover'=crop to fill, 'contain'=fit inside, 'inside'=shrink only, 'outside'=enlarge only",
+      "width": "number (optional) - Force specific width in pixels. Overrides auto-detection",
+      "height": "number (optional) - Force specific height in pixels. Overrides auto-detection",
+      "maintainAspectRatio": "boolean (optional, default: true) - Keep original aspect ratio when resizing. Set false to allow distortion"
+    },
+    "quality": {
+      "jpeg": "number (optional, 1-100, default: 90) - JPEG compression quality for output diff image. Higher = better quality, larger file",
+      "png": "number (optional, 0-9, default: 6) - PNG compression level for output diff image. 0=fastest/largest, 9=slowest/smallest",
+      "webp": "number (optional, 1-100, default: 80) - WebP compression quality for output diff image. Higher = better quality, larger file"
+    },
+    "colorSpace": {
+      "convert": "string (optional, values: 'srgb' | 'rgb16' | 'cmyk' | 'lab' | 'b-w') - Convert images to specific color space before comparison. 'srgb'=standard RGB, 'b-w'=black & white",
+      "grayscale": "boolean (optional, default: false) - Convert both images to grayscale before comparing. Useful to ignore color differences",
+      "normalize": "boolean (optional, default: false) - Normalize color values before comparison. Helps with brightness/contrast variations"
+    },
+    "output": {
+      "format": "string (optional, values: 'png' | 'jpeg' | 'webp', default: 'png') - Output format for diff image. PNG=lossless, JPEG=smaller but lossy, WebP=modern format",
+      "includeOriginals": "boolean (optional, default: false) - Include base64-encoded original images in response. Useful for debugging",
+      "includeDiffBounds": "boolean (optional, default: false) - Include bounding box coordinates of difference area (left, top, width, height). Useful for cropping",
+      "includeMetadata": "boolean (optional, default: false) - Include image dimensions, file sizes, pixel counts, and processing time in response"
+    }
+  }
+}
