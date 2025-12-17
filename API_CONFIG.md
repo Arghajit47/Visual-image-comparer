@@ -374,6 +374,197 @@ curl -X POST http://localhost:3000/api/compare-images \
 
 ---
 
+## 🗜️ Automatic Image Compression
+
+### Overview
+
+The API **automatically compresses images > 3MB** to prevent Netlify's 6MB payload limit from causing 500 errors.
+
+### Compression Strategy
+
+When an image exceeds 3MB, the API applies **progressive compression** in 3 steps:
+
+#### **Step 1: Quality Compression**
+
+Format-specific compression is applied first:
+
+| Format | Compression Applied |
+|--------|---------------------|
+| **JPEG/JPG** | Quality 75% + Progressive encoding |
+| **PNG** | Compression level 9 + Adaptive filtering |
+| **WebP** | Quality 70% |
+| **Others** | Convert to JPEG at 75% quality |
+
+#### **Step 2: Resize to 2048px** (if still > 3MB)
+
+- Maintains aspect ratio (`fit: 'inside'`)
+- Never enlarges smaller images (`withoutEnlargement: true`)
+- Reapplies format-specific compression
+
+#### **Step 3: Resize to 1024px** (if still > 3MB)
+
+- Further dimension reduction
+- Lower quality:
+  - JPEG: 70%
+  - WebP: 65%
+  - PNG: Compression level 9
+
+### Example Flow
+
+```
+Input: 8MB PNG image
+↓
+Step 1: PNG compression (level 9) → 5.2MB (still > 3MB)
+↓
+Step 2: Resize to 2048px + compress → 2.5MB ✅
+↓
+Use compressed image for comparison
+```
+
+### Netlify Limits
+
+| Limit Type | Free Tier | Pro Tier | Description |
+|------------|-----------|----------|-------------|
+| **Request Size** | 6MB | 6MB | Total payload size |
+| **Function Timeout** | 10s | 26s | Max execution time |
+| **Memory** | 1GB | 1GB | RAM limit |
+| **Image Data** | 6MB | 6MB | Per image (base64) |
+
+### When Compression Fails
+
+If images are **still > 6MB after automatic compression**, you'll receive:
+
+```json
+{
+  "differencePercentage": null,
+  "status": null,
+  "diffImageUrl": null,
+  "error": "Images are too large (6.8MB) even after automatic compression. Netlify has a 6MB limit. Please use smaller images."
+}
+```
+
+**HTTP Status**: `413 Payload Too Large`
+
+### Compression Logs
+
+The API logs compression steps for debugging:
+
+```log
+[API] Image size 8.5MB > 3MB, compressing...
+[API] Still 5.2MB after compression, resizing to 2048px...
+[API] Compression complete: 8.5MB → 2.5MB
+```
+
+### Best Practices
+
+✅ **Do:**
+- Send images < 3MB when possible (no compression needed)
+- Use JPEG for photos (better compression)
+- Pre-resize images on client-side for faster API response
+- Monitor compression logs to optimize image sizes
+
+❌ **Don't:**
+- Send images > 10MB (likely to fail even with compression)
+- Use uncompressed BMP/TIFF formats
+- Assume compression maintains exact pixel accuracy (minor quality loss)
+
+### Disabling Auto-Compression
+
+**Auto-compression cannot be disabled** as it's a safety feature to prevent 500 errors on Netlify.
+
+If you need pixel-perfect comparison without compression, ensure both images are < 3MB.
+
+---
+
+## ⚠️ Error Handling
+
+### HTTP Status Codes
+
+| Code | Status | Cause | Solution |
+|------|--------|-------|----------|
+| **200** | Success | Comparison completed | - |
+| **400** | Bad Request | Invalid input (missing images, bad threshold) | Check request body format |
+| **413** | Payload Too Large | Images > 6MB even after compression | Use smaller images |
+| **500** | Internal Server Error | Unexpected error (decode failure, memory) | Check image format, reduce size |
+| **504** | Gateway Timeout | Processing > 10s (free) or > 26s (pro) | Reduce image dimensions |
+
+### Common Errors
+
+#### 1. **"Request size exceeds Netlify's 6MB limit"**
+
+```json
+{
+  "error": "Request size (7.2MB) exceeds Netlify's 6MB limit. Please use smaller images."
+}
+```
+
+**Status**: 413  
+**Cause**: Total request payload > 6MB  
+**Solution**: 
+- Reduce image dimensions before upload
+- Use JPEG instead of PNG
+- Compress images client-side
+
+#### 2. **"Images too large even after automatic compression"**
+
+```json
+{
+  "error": "Images are too large (6.8MB) even after automatic compression. Netlify has a 6MB limit. Please use smaller images."
+}
+```
+
+**Status**: 413  
+**Cause**: Images > 6MB after 3-step compression  
+**Solution**:
+- Use images < 5MB initially
+- Pre-compress on client-side
+- Resize to max 1920x1080 before sending
+
+#### 3. **"Request timed out"**
+
+```json
+{
+  "error": "Request timed out. Images might be too large to process. Please try smaller images."
+}
+```
+
+**Status**: 504  
+**Cause**: Processing exceeds Netlify timeout (10s free, 26s pro)  
+**Solution**:
+- Reduce image dimensions (e.g., 1920x1080)
+- Use JPEG for faster processing
+- Upgrade to Netlify Pro for 26s timeout
+
+#### 4. **"Server ran out of memory"**
+
+```json
+{
+  "error": "Server ran out of memory processing images. Please use smaller images."
+}
+```
+
+**Status**: 500  
+**Cause**: Images consume > 1GB RAM during processing  
+**Solution**:
+- Use images < 4096x4096
+- Enable auto-resize in options
+- Reduce image dimensions
+
+#### 5. **"Invalid image format"**
+
+```json
+{
+  "error": "Failed to decode image: Input buffer contains unsupported image format. Supported formats: PNG, JPEG, WebP, GIF, AVIF, TIFF, SVG."
+}
+```
+
+**Status**: 400  
+**Cause**: Unsupported format (e.g., BMP, ICO) or corrupted data  
+**Solution**:
+- Convert to PNG/JPEG
+- Validate base64 encoding
+- Check data URI format: `data:image/png;base64,...`
+
 ---
 
 ## 🐛 Troubleshooting

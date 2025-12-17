@@ -147,6 +147,80 @@ async function base64ToBuffer(dataUri: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
+async function compressImageIfNeeded(dataUri: string): Promise<string> {
+  const threshold = 3 * 1024 * 1024;
+  
+  if (dataUri.length <= threshold) {
+    return dataUri;
+  }
+  
+  console.log(`[API] Image size ${(dataUri.length / 1024 / 1024).toFixed(2)}MB > 3MB, compressing...`);
+  
+  const buffer = await base64ToBuffer(dataUri);
+  const image = sharp(buffer);
+  const metadata = await image.metadata();
+  
+  let compressed = image;
+  let format = metadata.format || 'jpeg';
+  
+  if (format === 'jpeg' || format === 'jpg') {
+    compressed = compressed.jpeg({ quality: 75, progressive: true });
+  } else if (format === 'png') {
+    compressed = compressed.png({ compressionLevel: 9, adaptiveFiltering: true });
+  } else if (format === 'webp') {
+    compressed = compressed.webp({ quality: 70 });
+  } else {
+    compressed = compressed.jpeg({ quality: 75 });
+    format = 'jpeg';
+  }
+  
+  let compressedBuffer = await compressed.toBuffer();
+  let compressedSize = compressedBuffer.length;
+  
+  if (compressedSize > threshold) {
+    console.log(`[API] Still ${(compressedSize / 1024 / 1024).toFixed(2)}MB after compression, resizing to 2048px...`);
+    compressed = sharp(buffer).resize(2048, 2048, { fit: 'inside', withoutEnlargement: true });
+    
+    if (format === 'jpeg' || format === 'jpg') {
+      compressed = compressed.jpeg({ quality: 75 });
+    } else if (format === 'png') {
+      compressed = compressed.png({ compressionLevel: 9 });
+    } else if (format === 'webp') {
+      compressed = compressed.webp({ quality: 70 });
+    } else {
+      compressed = compressed.jpeg({ quality: 75 });
+    }
+    
+    compressedBuffer = await compressed.toBuffer();
+    compressedSize = compressedBuffer.length;
+  }
+  
+  if (compressedSize > threshold) {
+    console.log(`[API] Still ${(compressedSize / 1024 / 1024).toFixed(2)}MB, resizing to 1024px...`);
+    compressed = sharp(buffer).resize(1024, 1024, { fit: 'inside', withoutEnlargement: true });
+    
+    if (format === 'jpeg' || format === 'jpg') {
+      compressed = compressed.jpeg({ quality: 70 });
+    } else if (format === 'png') {
+      compressed = compressed.png({ compressionLevel: 9 });
+    } else if (format === 'webp') {
+      compressed = compressed.webp({ quality: 65 });
+    } else {
+      compressed = compressed.jpeg({ quality: 70 });
+    }
+    
+    compressedBuffer = await compressed.toBuffer();
+    compressedSize = compressedBuffer.length;
+  }
+  
+  const base64Compressed = compressedBuffer.toString('base64');
+  const newDataUri = `data:image/${format};base64,${base64Compressed}`;
+  
+  console.log(`[API] Compression complete: ${(dataUri.length / 1024 / 1024).toFixed(2)}MB → ${(newDataUri.length / 1024 / 1024).toFixed(2)}MB`);
+  
+  return newDataUri;
+}
+
 interface ImageData {
   data: Buffer;
   width: number;
@@ -264,15 +338,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (baseImageSource.length > MAX_IMAGE_DATA_LENGTH || actualImageSource.length > MAX_IMAGE_DATA_LENGTH) {
-      const largerSize = Math.max(baseImageSource.length, actualImageSource.length);
-      console.log('[API] Image data too large:', (largerSize / 1024 / 1024).toFixed(2), 'MB');
+    let processedBaseImage = baseImageSource;
+    let processedActualImage = actualImageSource;
+    
+    if (baseImageSource.length > 3 * 1024 * 1024) {
+      processedBaseImage = await compressImageIfNeeded(baseImageSource);
+    }
+    
+    if (actualImageSource.length > 3 * 1024 * 1024) {
+      processedActualImage = await compressImageIfNeeded(actualImageSource);
+    }
+    
+    if (processedBaseImage.length > MAX_IMAGE_DATA_LENGTH || processedActualImage.length > MAX_IMAGE_DATA_LENGTH) {
+      const largerSize = Math.max(processedBaseImage.length, processedActualImage.length);
+      console.log('[API] Image data still too large after compression:', (largerSize / 1024 / 1024).toFixed(2), 'MB');
       return NextResponse.json(
         {
           differencePercentage: null,
           status: null,
           diffImageUrl: null,
-          error: `Image data is too large (${(largerSize / 1024 / 1024).toFixed(2)}MB). Netlify has a 6MB limit. Please use smaller images.`,
+          error: `Images are too large (${(largerSize / 1024 / 1024).toFixed(2)}MB) even after automatic compression. Netlify has a 6MB limit. Please use smaller images.`,
         } as CompareImagesResponseBody,
         { status: 413, headers: corsHeaders }
       );
@@ -292,8 +377,8 @@ export async function POST(request: NextRequest) {
     
     console.log('[API] Starting pixelmatch comparison...');
 
-    const baseBuffer = await base64ToBuffer(baseImageSource);
-    const actualBuffer = await base64ToBuffer(actualImageSource);
+    const baseBuffer = await base64ToBuffer(processedBaseImage);
+    const actualBuffer = await base64ToBuffer(processedActualImage);
 
     const startTime = Date.now();
 
