@@ -6,8 +6,12 @@ publish = ".next"
 package = "@netlify/plugin-nextjs"
 
 [functions]
+directory = ".netlify/functions-internal"
 node_bundler = "esbuild"
-external_node_modules = ["sharp"]
+
+[[functions]]
+path = "/api/*"
+included_files = ["node_modules/**"]
 
 [dev]
 command = "npm run dev"
