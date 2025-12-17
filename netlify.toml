@@ -8,10 +8,7 @@ package = "@netlify/plugin-nextjs"
 [functions]
 directory = ".netlify/functions-internal"
 node_bundler = "esbuild"
-
-[[functions]]
-path = "/api/*"
-included_files = ["node_modules/**"]
+included_files = ["node_modules/sharp/**", "node_modules/pixelmatch/**"]
 
 [dev]
 command = "npm run dev"
